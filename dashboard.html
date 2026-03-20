@@ -112,7 +112,7 @@
       <div class="plan-name" id="planName">Starter — 100 messages/month</div>
       <div class="plan-msgs" id="planMsgs">R99/month · Renews on 1 April 2025</div>
     </div>
-    <a href="landing.html#pricing" class="btn-upgrade">⬆ Upgrade plan</a>
+    <a href="billing.html" class="btn-upgrade">⬆ Upgrade plan</a>
   </div>
 
   <!-- USAGE -->
@@ -154,7 +154,7 @@
       <div class="action-title">Send Messages</div>
       <div class="action-sub">Import contacts and send your campaign</div>
     </a>
-    <a href="landing.html#pricing" class="action-card">
+    <a href="billing.html" class="action-card">
       <div class="action-icon">⬆️</div>
       <div class="action-title">Upgrade Plan</div>
       <div class="action-sub">Get more messages per month</div>
@@ -205,6 +205,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const name = user.user_metadata?.full_name || user.email.split('@')[0];
   document.getElementById('userName').textContent  = name;
   document.getElementById('userEmail').textContent = user.email;
+
+  // Handle return from PayFast
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('payment') === 'success') {
+    const pendingPlan = localStorage.getItem('wablast_pending_plan');
+    if(pendingPlan) {
+      await sb.auth.updateUser({ data: { plan: pendingPlan } });
+      localStorage.removeItem('wablast_pending_plan');
+      // Clean URL
+      window.history.replaceState({}, '', 'dashboard.html');
+    }
+  }
 
   // Set plan info based on metadata
   const plan = user.user_metadata?.plan || 'starter';

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WABlast — Choose Your Plan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{--bg:#0a0f0d;--surface:#111a15;--surface2:#1a2620;--border:#1f2e27;--green:#25d366;--green-dark:#1aad4e;--green-glow:rgba(37,211,102,0.12);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--radius:14px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nav-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .nav-logo-text{font-size:1.1rem;font-weight:800;color:var(--white);}
+    .nav-logo-text span{color:var(--green);}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+    .user-email{font-size:0.8rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .btn-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+    .btn-back:hover{border-color:var(--muted);color:var(--white);}
+    .page{max-width:1100px;margin:0 auto;padding:48px 24px;}
+    .page-header{text-align:center;margin-bottom:48px;}
+    .page-header h1{font-size:2.2rem;font-weight:800;color:var(--white);letter-spacing:-1px;margin-bottom:10px;}
+    .page-header p{font-size:1rem;color:var(--muted);}
+    .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+    .plan{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 20px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.2s;}
+    .plan:hover{transform:translateY(-4px);}
+    .plan.pop{border-color:var(--green);}
+    .plan.pop::before{content:'MOST POPULAR';position:absolute;top:0;left:0;right:0;background:var(--green);color:#0a0f0d;font-size:0.6rem;font-weight:800;letter-spacing:2px;text-align:center;padding:5px;}
+    .plan.pop .plan-body{margin-top:22px;}
+    .plan-body{flex:1;display:flex;flex-direction:column;}
+    .plan-name{font-size:1rem;font-weight:800;color:var(--white);margin-bottom:4px;}
+    .plan-msgs{font-size:0.73rem;color:var(--green);font-weight:700;margin-bottom:14px;}
+    .plan-price{font-size:2.1rem;font-weight:800;color:var(--white);line-height:1;margin-bottom:3px;}
+    .plan-price sup{font-size:0.95rem;vertical-align:top;margin-top:5px;color:var(--muted);font-weight:500;}
+    .plan-price sub{font-size:0.78rem;color:var(--muted);font-weight:400;}
+    .plan-overage{font-size:0.7rem;color:var(--muted);margin-bottom:18px;}
+    .plan-div{height:1px;background:var(--border);margin-bottom:16px;}
+    .plan-feats{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1;margin-bottom:20px;}
+    .plan-feats li{font-size:0.78rem;color:var(--muted);display:flex;align-items:flex-start;gap:7px;line-height:1.4;}
+    .plan-feats li::before{content:'✓';color:var(--green);font-weight:800;flex-shrink:0;}
+    .plan-feats li.no{color:#2a3a30;}
+    .plan-feats li.no::before{content:'✕';color:#2a3a30;}
+    .btn-plan{background:var(--surface2);color:var(--white);border:1px solid var(--border);border-radius:9px;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:0.85rem;padding:12px;text-align:center;cursor:pointer;transition:all 0.2s;display:block;width:100%;}
+    .btn-plan:hover{background:var(--border);}
+    .plan.pop .btn-plan{background:var(--green);color:#0a0f0d;border-color:var(--green);}
+    .plan.pop .btn-plan:hover{background:var(--green-dark);}
+    .btn-plan:disabled{opacity:0.5;cursor:not-allowed;}
+    .current-badge{display:inline-block;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);color:var(--green);font-size:0.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:99px;text-align:center;width:100%;}
+    .note{text-align:center;margin-top:32px;font-size:0.8rem;color:var(--muted);line-height:1.7;}
+    .note a{color:var(--green);text-decoration:none;}
+
+    /* HIDDEN PAYFAST FORM */
+    #payfastForm{display:none;}
+
+    /* LOADING */
+    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;}
+    .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #loadingScreen p{font-size:0.85rem;color:var(--muted);}
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Loading plans…</p>
+</div>
+
+<nav>
+  <a href="landing.html" class="nav-logo">
+    <div class="nav-logo-icon">💬</div>
+    <div class="nav-logo-text">WA<span>Blast</span></div>
+  </a>
+  <div class="nav-right">
+    <span class="user-email" id="userEmail"></span>
+    <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Choose your plan</h1>
+    <p>All plans include Excel import, personalisation and live delivery reports.</p>
+  </div>
+
+  <div class="pricing-grid" id="pricingGrid">
+    <!-- Rendered by JS -->
+  </div>
+
+  <div class="note">
+    Payments processed securely by <a href="https://payfast.io" target="_blank">PayFast</a> 🔒 · All prices in ZAR incl. VAT · Cancel anytime
+  </div>
+</div>
+
+<!-- Hidden PayFast form — submitted programmatically -->
+<form id="payfastForm" action="https://www.payfast.co.za/eng/process" method="POST">
+  <input type="hidden" name="merchant_id"    value="11524778"/>
+  <input type="hidden" name="merchant_key"   value="6pnndozsbggfg"/>
+  <input type="hidden" name="return_url"     value="https://hermanvs27-afk.github.io/wablast/dashboard.html?payment=success"/>
+  <input type="hidden" name="cancel_url"     value="https://hermanvs27-afk.github.io/wablast/billing.html?payment=cancelled"/>
+  <input type="hidden" name="notify_url"     value="https://hermanvs27-afk.github.io/wablast/dashboard.html"/>
+  <input type="hidden" name="name_first"     id="pf_name_first"/>
+  <input type="hidden" name="email_address"  id="pf_email"/>
+  <input type="hidden" name="m_payment_id"   id="pf_payment_id"/>
+  <input type="hidden" name="amount"         id="pf_amount"/>
+  <input type="hidden" name="item_name"      id="pf_item_name"/>
+  <input type="hidden" name="item_description" id="pf_item_desc"/>
+  <input type="hidden" name="subscription_type" value="1"/>
+  <input type="hidden" name="billing_date"   id="pf_billing_date"/>
+  <input type="hidden" name="recurring_amount" id="pf_recurring"/>
+  <input type="hidden" name="frequency"      value="3"/>
+  <input type="hidden" name="cycles"         value="0"/>
+</form>
+
+<script>
+const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const PLANS = [
+  { id:'starter',    name:'Starter',    msgs:100,   price:99,    overage:'R0.55', features:['100 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports'], noFeatures:['Dedicated number','Priority support'] },
+  { id:'basic',      name:'Basic',      msgs:500,   price:199,   overage:'R0.45', features:['500 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports'], noFeatures:['Dedicated number','Priority support'] },
+  { id:'growth',     name:'Growth',     msgs:1000,  price:349,   overage:'R0.40', features:['1,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number'], noFeatures:['Priority support'], popular:true },
+  { id:'pro',        name:'Pro',        msgs:2000,  price:599,   overage:'R0.35', features:['2,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support'], noFeatures:[] },
+  { id:'business',   name:'Business',   msgs:5000,  price:1199,  overage:'R0.30', features:['5,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support'], noFeatures:[] },
+  { id:'enterprise', name:'Enterprise', msgs:10000, price:2099,  overage:'R0.25', features:['10,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support + onboarding'], noFeatures:[] },
+];
+
+let currentUser = null;
+let currentPlan  = 'none';
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href='auth.html'; return; }
+  currentUser = session.user;
+  currentPlan  = currentUser.user_metadata?.plan || 'none';
+  document.getElementById('userEmail').textContent = currentUser.email;
+  renderPlans();
+  document.getElementById('loadingScreen').style.display='none';
+
+  // Show cancelled message
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('payment')==='cancelled') alert('Payment was cancelled. Your plan was not changed.');
+});
+
+function renderPlans() {
+  const grid = document.getElementById('pricingGrid');
+  grid.innerHTML = PLANS.map(p => {
+    const isCurrent = p.id === currentPlan;
+    const feats = p.features.map(f=>`<li>${f}</li>`).join('');
+    const noFeats = p.noFeatures.map(f=>`<li class="no">${f}</li>`).join('');
+    const btn = isCurrent
+      ? `<div class="current-badge">✓ Current Plan</div>`
+      : `<button class="btn-plan" onclick="selectPlan('${p.id}','${p.name}',${p.price})">Get started</button>`;
+    return `
+      <div class="plan ${p.popular?'pop':''}">
+        <div class="plan-body">
+          <div class="plan-name">${p.name}</div>
+          <div class="plan-msgs">${p.msgs.toLocaleString()} messages / month</div>
+          <div class="plan-price"><sup>R</sup>${p.price.toLocaleString()}<sub>/mo</sub></div>
+          <div class="plan-overage">Extra: ${p.overage} / message</div>
+          <div class="plan-div"></div>
+          <ul class="plan-feats">${feats}${noFeats}</ul>
+          ${btn}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectPlan(planId, planName, price) {
+  if(!currentUser) return;
+
+  // Generate a unique payment ID
+  const paymentId = `wablast_${currentUser.id.substring(0,8)}_${planId}_${Date.now()}`;
+
+  // Get billing date (today)
+  const today = new Date();
+  const billingDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // Get first name from email
+  const firstName = currentUser.user_metadata?.full_name?.split(' ')[0] || currentUser.email.split('@')[0];
+
+  // Fill PayFast form
+  document.getElementById('pf_name_first').value  = firstName;
+  document.getElementById('pf_email').value        = currentUser.email;
+  document.getElementById('pf_payment_id').value   = paymentId;
+  document.getElementById('pf_amount').value        = price.toFixed(2);
+  document.getElementById('pf_item_name').value     = `WABlast ${planName} Plan`;
+  document.getElementById('pf_item_desc').value     = `WABlast ${planName} — ${PLANS.find(p=>p.id===planId).msgs.toLocaleString()} messages/month`;
+  document.getElementById('pf_billing_date').value  = billingDate;
+  document.getElementById('pf_recurring').value     = price.toFixed(2);
+
+  // Store selected plan so dashboard can update after return
+  localStorage.setItem('wablast_pending_plan', planId);
+
+  // Submit to PayFast
+  document.getElementById('payfastForm').submit();
+}
+</script>
+</body>
+</html>
