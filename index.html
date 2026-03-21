@@ -355,8 +355,9 @@ function resolveMsg(tpl,c){ return tpl.replace(/\{name\}/gi,c.name||'there').rep
 // ── Send via Meta API ──
 async function startSending() {
   if(!contacts.length) return toast('Add at least one contact');
+  const msgType = document.getElementById('msgType').value;
   const msg     = document.getElementById('msgText').value.trim();
-  if(!msg) return toast('Write a message first');
+  if(!msg && msgType !== 'template') return toast('Write a message first');
   const token   = document.getElementById('metaToken').value.trim();
   const phoneId = document.getElementById('metaPhoneId').value.trim();
   if(!token||!phoneId) return toast('Enter your Meta API credentials first');
