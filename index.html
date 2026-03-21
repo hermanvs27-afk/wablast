@@ -179,35 +179,10 @@
       <button class="mode-btn" id="modeSender" onclick="setMode('sender')">📱 Sender — Send via Your WhatsApp</button>
     </div>
 
-    <!-- SETUP GUIDE -->
-    <div class="notice" id="setupGuide">
-      <strong>🔑 One-time Meta setup — takes ~5 minutes</strong>
-      <div class="setup-steps">
-        <div class="step"><div class="step-num">1</div><span>Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> → Create App → Business type</span></div>
-        <div class="step"><div class="step-num">2</div><span>Add <strong>WhatsApp</strong> product to your app → go to WhatsApp → Getting Started</span></div>
-        <div class="step"><div class="step-num">3</div><span>Copy your <strong>Phone Number ID</strong> and <strong>Access Token</strong> from the dashboard</span></div>
-        <div class="step"><div class="step-num">4</div><span>Paste them below — your number is now your sender. Clients reply directly to you ✅</span></div>
-      </div>
-    </div>
+    <!-- SETUP GUIDE (hidden — credentials are pre-configured) -->
 
-    <!-- META CREDENTIALS -->
-    <div class="card">
-      <div class="card-title">🔑 Meta API Credentials <span class="saved" id="credsSaved">✓ saved</span></div>
-      <div class="creds-grid">
-        <div class="field">
-          <label>Access Token</label>
-          <input type="password" id="metaToken" placeholder="EAAxxxxxxx..." oninput="saveCreds()"/>
-        </div>
-        <div class="field">
-          <label>Phone Number ID</label>
-          <input type="text" id="metaPhoneId" placeholder="1234567890" oninput="saveCreds()"/>
-        </div>
-      </div>
-      <div class="creds-note">
-        Found in <a href="https://developers.facebook.com" target="_blank">Meta for Developers</a> → Your App → WhatsApp → API Setup.
-        Free tier: <code>1,000 conversations/month</code>. Messages send from <strong>your own WhatsApp Business number</strong> — clients reply directly to you.
-      </div>
-    </div>
+    <!-- META CREDENTIALS (admin-only — hardcoded, not shown to clients) -->
+    <!-- Token: PERMANENT_META_TOKEN | Phone Number ID: PHONE_NUMBER_ID -->
 
     <!-- MESSAGE -->
     <div class="card">
@@ -277,36 +252,16 @@
 <div id="toast"></div>
 
 <script>
+// ── WABlast Admin Config (set during onboarding — not visible to clients) ──
+const PERMANENT_META_TOKEN = 'EAAXRwYz4NoMBRHZBJtnxxU23usFBMLEJk1utk3N34nkAAyAWZAFo2HZAPbVejeywz5aEVZCSGZB0sZBZB5o10U5arRmAYje3Y3855Gk8SozQzuWczPwJjaSSpFGOeQ0Ed6mD0wg2tITRpoeFltERZCZCZCcRG6ks9pW0Fef8BY8P4Aan7rMAL1JnuM2k0wIZCORwwZDZD';
+const PHONE_NUMBER_ID      = '1008323572370879';
+
 let contacts = [], stopFlag = false, xlsxRows = [];
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
-  loadCreds();
   document.getElementById('phoneInput').addEventListener('keydown', e => { if(e.key==='Enter') addContact(); });
 });
-
-// ── Credentials ──
-function saveCreds() {
-  localStorage.setItem('wablast_meta', JSON.stringify({
-    token:   document.getElementById('metaToken').value.trim(),
-    phoneId: document.getElementById('metaPhoneId').value.trim()
-  }));
-  document.getElementById('credsSaved').style.display = 'inline';
-  if(document.getElementById('metaToken').value.trim()) {
-    document.getElementById('setupGuide').style.display = 'none';
-  }
-}
-function loadCreds() {
-  try {
-    const c = JSON.parse(localStorage.getItem('wablast_meta')||'{}');
-    if(c.token)   { document.getElementById('metaToken').value   = c.token;   }
-    if(c.phoneId) { document.getElementById('metaPhoneId').value = c.phoneId; }
-    if(c.token)   {
-      document.getElementById('credsSaved').style.display = 'inline';
-      document.getElementById('setupGuide').style.display = 'none';
-    }
-  } catch(e){}
-}
 
 // ── Contacts ──
 function addContact() {
@@ -413,9 +368,9 @@ async function startSending() {
   const msgType = document.getElementById('msgType').value;
   const msg     = document.getElementById('msgText').value.trim();
   if(!msg && msgType !== 'template') return toast('Write a message first');
-  const token   = document.getElementById('metaToken').value.trim();
-  const phoneId = document.getElementById('metaPhoneId').value.trim();
-  if(!token||!phoneId) return toast('Enter your Meta API credentials first');
+  const token   = PERMANENT_META_TOKEN;
+  const phoneId = PHONE_NUMBER_ID;
+  if(!token||!phoneId) return toast('Meta credentials not configured — contact WABlast support');
 
   stopFlag = false;
   document.getElementById('sendBtn').disabled = true;
