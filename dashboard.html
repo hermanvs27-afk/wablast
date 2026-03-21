@@ -186,53 +186,107 @@
 <script>
 const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
-
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+const PLANS = {
+  starter:    { name:'Starter',    msgs:100,   price:'R99' },
+  basic:      { name:'Basic',      msgs:500,   price:'R199' },
+  growth:     { name:'Growth',     msgs:1000,  price:'R349' },
+  pro:        { name:'Pro',        msgs:2000,  price:'R599' },
+  business:   { name:'Business',   msgs:5000,  price:'R1,199' },
+  enterprise: { name:'Enterprise', msgs:10000, price:'R2,099' },
+};
+
 window.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await sb.auth.getSession();
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) { window.location.href = 'auth.html'; return; }
 
-  if (!session) {
-    window.location.href = 'auth.html';
-    return;
-  }
-
-  // Hide loading
-  document.getElementById('loadingScreen').style.display = 'none';
-
-  // Set user info
   const user = session.user;
   const name = user.user_metadata?.full_name || user.email.split('@')[0];
   document.getElementById('userName').textContent  = name;
   document.getElementById('userEmail').textContent = user.email;
 
-  // Handle return from PayFast
+  // Handle PayFast return
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment') === 'success') {
     const pendingPlan = localStorage.getItem('wablast_pending_plan');
     if(pendingPlan) {
       await sb.auth.updateUser({ data: { plan: pendingPlan } });
+      // Top up credits for new plan
+      const limit = PLANS[pendingPlan]?.msgs || 100;
+      await sb.from('user_credits').upsert({
+        user_id: user.id, credits_remaining: limit, plan: pendingPlan,
+        updated_at: new Date().toISOString()
+      });
       localStorage.removeItem('wablast_pending_plan');
-      // Clean URL
       window.history.replaceState({}, '', 'dashboard.html');
     }
   }
 
-  // Set plan info based on metadata
-  const plan = user.user_metadata?.plan || 'starter';
-  const plans = {
-    starter:    { name: 'Starter',    msgs: 100,   price: 'R99' },
-    basic:      { name: 'Basic',      msgs: 500,   price: 'R199' },
-    growth:     { name: 'Growth',     msgs: 1000,  price: 'R349' },
-    pro:        { name: 'Pro',        msgs: 2000,  price: 'R599' },
-    business:   { name: 'Business',   msgs: 5000,  price: 'R1,199' },
-    enterprise: { name: 'Enterprise', msgs: 10000, price: 'R2,099' },
-  };
-  const p = plans[plan] || plans.starter;
-  document.getElementById('planName').textContent  = `${p.name} — ${p.msgs.toLocaleString()} messages/month`;
-  document.getElementById('planMsgs').textContent  = `${p.price}/month`;
-  document.getElementById('msgLimit').textContent  = p.msgs;
-  document.getElementById('statRemaining').textContent = p.msgs;
+  // Plan info
+  const planKey = user.user_metadata?.plan || 'starter';
+  const p = PLANS[planKey] || PLANS.starter;
+  document.getElementById('planName').textContent = `${p.name} — ${p.msgs.toLocaleString()} messages/month`;
+  document.getElementById('planMsgs').textContent = `${p.price}/month`;
+  document.getElementById('msgLimit').textContent = p.msgs.toLocaleString();
+
+  // Load credits from Supabase
+  const { data: credData } = await sb
+    .from('user_credits')
+    .select('credits_remaining')
+    .eq('user_id', user.id)
+    .single();
+
+  const creditsRemaining = credData?.credits_remaining ?? p.msgs;
+  const used = p.msgs - creditsRemaining;
+  const pct  = Math.min(100, Math.round((used / p.msgs) * 100));
+
+  document.getElementById('msgUsed').textContent          = Math.max(0, used).toLocaleString();
+  document.getElementById('usageBar').style.width         = pct + '%';
+  document.getElementById('statRemaining').textContent    = creditsRemaining.toLocaleString();
+  document.getElementById('statSent').textContent         = Math.max(0, used).toLocaleString();
+
+  // Load usage logs for campaigns count + recent sessions
+  const now        = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data: logs } = await sb
+    .from('usage_logs')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('created_at', monthStart)
+    .order('created_at', { ascending: false });
+
+  const campaigns  = (logs || []).length;
+  const totalSent  = (logs || []).reduce((s, r) => s + (r.sent || 0), 0);
+  document.getElementById('statCampaigns').textContent = campaigns;
+
+  // Recent campaigns table
+  const recentCard = document.querySelector('.recent-card');
+  if(logs && logs.length > 0) {
+    recentCard.innerHTML = `
+      <div class="card-title">📨 Recent campaigns</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+        <thead>
+          <tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--border);">
+            <th style="padding:8px 0;">Date</th>
+            <th style="padding:8px 0;">Mode</th>
+            <th style="padding:8px 0;">Sent</th>
+            <th style="padding:8px 0;">Failed</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logs.slice(0,10).map(r => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:10px 0;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;">${new Date(r.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+              <td style="padding:10px 0;"><span style="background:var(--surface2);padding:2px 8px;border-radius:99px;font-size:0.72rem;text-transform:capitalize;">${r.mode||'blaster'}</span></td>
+              <td style="padding:10px 0;color:var(--green);font-weight:700;">${r.sent||0}</td>
+              <td style="padding:10px 0;color:var(--danger);">${r.failed||0}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  document.getElementById('loadingScreen').style.display = 'none';
 });
 
 async function logout() {

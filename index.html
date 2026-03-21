@@ -179,10 +179,9 @@
       <button class="mode-btn" id="modeSender" onclick="setMode('sender')">📱 Sender — Send via Your WhatsApp</button>
     </div>
 
-    <!-- SETUP GUIDE (hidden — credentials are pre-configured) -->
+    <!-- SETUP GUIDE (hidden — pre-configured) -->
 
-    <!-- META CREDENTIALS (admin-only — hardcoded, not shown to clients) -->
-    <!-- Token: PERMANENT_META_TOKEN | Phone Number ID: PHONE_NUMBER_ID -->
+    <!-- META CREDENTIALS (admin-only — hardcoded) -->
 
     <!-- MESSAGE -->
     <div class="card">
@@ -229,6 +228,8 @@
     <div class="actions" id="blasterPanel">
       <button class="btn-send" id="sendBtn" onclick="startSending()">🚀 Send All Now</button>
       <button class="btn-stop" id="stopBtn" onclick="stopSending()">⏹ Stop</button>
+      <span id="creditsDisplay" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--green);margin-left:8px;"></span>
+      <a href="billing.html" id="buyMoreBtn" style="display:none;font-size:0.78rem;color:var(--accent);text-decoration:none;margin-left:4px;font-weight:700;">Buy more →</a>
     </div>
 
     <!-- SENDER PANEL -->
@@ -252,7 +253,7 @@
 <div id="toast"></div>
 
 <script>
-// ── WABlast Admin Config (set during onboarding — not visible to clients) ──
+// ── WABlast Admin Config ──
 const PERMANENT_META_TOKEN = 'EAAXRwYz4NoMBRHZBJtnxxU23usFBMLEJk1utk3N34nkAAyAWZAFo2HZAPbVejeywz5aEVZCSGZB0sZBZB5o10U5arRmAYje3Y3855Gk8SozQzuWczPwJjaSSpFGOeQ0Ed6mD0wg2tITRpoeFltERZCZCZCcRG6ks9pW0Fef8BY8P4Aan7rMAL1JnuM2k0wIZCORwwZDZD';
 const PHONE_NUMBER_ID      = '1008323572370879';
 
@@ -370,7 +371,13 @@ async function startSending() {
   if(!msg && msgType !== 'template') return toast('Write a message first');
   const token   = PERMANENT_META_TOKEN;
   const phoneId = PHONE_NUMBER_ID;
-  if(!token||!phoneId) return toast('Meta credentials not configured — contact WABlast support');
+  if(!token||!phoneId) return toast('Meta credentials not configured');
+
+  if(currentUserId && userCredits <= 0) {
+    toast('⛔ No messages remaining — please buy more');
+    window.location.href = 'billing.html';
+    return;
+  }
 
   stopFlag = false;
   document.getElementById('sendBtn').disabled = true;
@@ -439,9 +446,14 @@ async function startSending() {
 
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('stopBtn').style.display = 'none';
-  const sent = contacts.filter(c=>c.status==='sent').length;
+  const sent   = contacts.filter(c=>c.status==='sent').length;
+  const failed = contacts.filter(c=>c.status==='failed').length;
   log(`Done! ${sent}/${contacts.length} messages sent.`,'info');
   toast(`✅ ${sent} messages sent!`);
+
+  // Deduct credits and log session
+  await deductCredits(sent);
+  await logSession(sent, failed, 'blaster');
 }
 
 function stopSending(){
@@ -607,25 +619,83 @@ function stopSender() {
   toast('Sender stopped');
 }
 
-// ── Supabase + Opt-out ──
+// ── Supabase ──
 const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-let optedOutNumbers = new Set();
-let currentUserId = null;
+const PLAN_LIMITS = {
+  starter:100, basic:500, growth:1000, pro:2000, business:5000, enterprise:10000
+};
 
-// Load opt-outs on startup
+let optedOutNumbers = new Set();
+let currentUserId   = null;
+let userCredits     = 0;
+
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data:{ session } } = await sb.auth.getSession();
     if(session) {
       currentUserId = session.user.id;
       await loadOptOuts();
+      await loadCredits(session.user);
     }
   } catch(e) { console.warn('Supabase not connected:', e); }
 });
 
+// ── Credits ──
+async function loadCredits(user) {
+  if(!currentUserId) return;
+  const { data, error } = await sb
+    .from('user_credits')
+    .select('credits_remaining')
+    .eq('user_id', currentUserId)
+    .single();
+  if(error || !data) {
+    const plan  = user?.user_metadata?.plan || 'starter';
+    const limit = PLAN_LIMITS[plan] || 100;
+    await sb.from('user_credits').upsert({
+      user_id: currentUserId, credits_remaining: limit, plan,
+      updated_at: new Date().toISOString()
+    });
+    userCredits = limit;
+  } else {
+    userCredits = data.credits_remaining;
+  }
+  updateCreditsUI();
+}
+
+function updateCreditsUI() {
+  const el  = document.getElementById('creditsDisplay');
+  const btn = document.getElementById('buyMoreBtn');
+  if(el) {
+    el.textContent = userCredits <= 0
+      ? '⛔ 0 messages remaining'
+      : `${userCredits} messages remaining`;
+    el.style.color = userCredits <= 0 ? 'var(--danger)' : userCredits < 20 ? 'var(--warn)' : 'var(--green)';
+  }
+  if(btn) btn.style.display = userCredits <= 0 ? 'inline' : 'none';
+}
+
+async function deductCredits(sent) {
+  if(!currentUserId || sent <= 0) return;
+  const newTotal = Math.max(0, userCredits - sent);
+  await sb.from('user_credits')
+    .update({ credits_remaining: newTotal, updated_at: new Date().toISOString() })
+    .eq('user_id', currentUserId);
+  userCredits = newTotal;
+  updateCreditsUI();
+}
+
+async function logSession(sent, failed, mode) {
+  if(!currentUserId) return;
+  await sb.from('usage_logs').insert({
+    user_id: currentUserId, sent, failed, mode,
+    created_at: new Date().toISOString()
+  });
+}
+
+// ── Opt-outs ──
 async function loadOptOuts() {
   if(!currentUserId) return;
   const { data, error } = await sb.from('opted_out').select('phone').eq('user_id', currentUserId);
@@ -651,7 +721,6 @@ async function addOptOut() {
   if(!phone || phone.length < 10) return toast('Enter a valid number');
   if(optedOutNumbers.has(phone)) return toast('Already on opt-out list');
   if(!currentUserId) return toast('Please sign in to use opt-out list');
-
   const { error } = await sb.from('opted_out').insert({ user_id: currentUserId, phone });
   if(error) { toast('Error saving opt-out'); console.error(error); return; }
   optedOutNumbers.add(phone);
