@@ -8,6 +8,7 @@
   <title>WABlast — Meta API Sender</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     :root{--green:#00e676;--green-dark:#00c853;--bg:#080d0a;--surface:#0f1a10;--surface2:#1a2820;--border:#1e2e1e;--text:#e9edef;--muted:#8696a0;--accent:#69ffda;--danger:#ff6b6b;--warn:#ffb347;--radius:12px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -133,6 +134,16 @@
 
     <div class="sb">
       <button class="btn ghost" style="width:100%;height:36px;font-size:0.8rem;" onclick="clearContacts()">🗑 Clear all contacts</button>
+    </div>
+
+    <div class="sb">
+      <div class="slabel">🚫 Opt-out list (<span id="optOutCount">0</span>)</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">Numbers on this list are automatically skipped when sending.</div>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="tel" id="optOutInput" placeholder="+27 82 123 4567" style="flex:1;"/>
+        <button class="btn sm" onclick="addOptOut()">+ Add</button>
+      </div>
+      <ul class="contact-list" id="optOutList" style="max-height:150px;"></ul>
     </div>
   </aside>
 
@@ -375,6 +386,15 @@ async function startSending() {
   for(let i=0;i<contacts.length;i++){
     if(stopFlag){log('⏹ Stopped.','info');break;}
     const c=contacts[i];
+
+    // Skip opted-out numbers
+    if(optedOutNumbers.has(c.phone)) {
+      c.status='failed';
+      log(`⛔ Skipped ${c.phone} — opted out`,'fail');
+      renderContacts(); updateStats(); updateProgress(i+1,contacts.length);
+      continue;
+    }
+
     c.status='sending'; renderContacts();
 
     try {
@@ -456,6 +476,67 @@ function toast(msg){
   const el=document.getElementById('toast');
   el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ── Supabase + Opt-out ──
+const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let optedOutNumbers = new Set();
+let currentUserId = null;
+
+// Load opt-outs on startup
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session) {
+      currentUserId = session.user.id;
+      await loadOptOuts();
+    }
+  } catch(e) { console.warn('Supabase not connected:', e); }
+});
+
+async function loadOptOuts() {
+  if(!currentUserId) return;
+  const { data, error } = await sb.from('opted_out').select('phone').eq('user_id', currentUserId);
+  if(error) { console.warn('Opt-out load error:', error); return; }
+  optedOutNumbers = new Set((data||[]).map(r => r.phone));
+  renderOptOuts();
+}
+
+function renderOptOuts() {
+  document.getElementById('optOutCount').textContent = optedOutNumbers.size;
+  const list = document.getElementById('optOutList');
+  list.innerHTML = [...optedOutNumbers].map(phone => `
+    <li class="ci failed">
+      <span class="dot"></span>
+      <span class="num">${phone}</span>
+      <button class="btn-rm" onclick="removeOptOut('${phone}')">✕</button>
+    </li>`).join('');
+}
+
+async function addOptOut() {
+  const input = document.getElementById('optOutInput');
+  const phone = formatSA(input.value.trim());
+  if(!phone || phone.length < 10) return toast('Enter a valid number');
+  if(optedOutNumbers.has(phone)) return toast('Already on opt-out list');
+  if(!currentUserId) return toast('Please sign in to use opt-out list');
+
+  const { error } = await sb.from('opted_out').insert({ user_id: currentUserId, phone });
+  if(error) { toast('Error saving opt-out'); console.error(error); return; }
+  optedOutNumbers.add(phone);
+  input.value = '';
+  renderOptOuts();
+  toast(`${phone} added to opt-out list`);
+}
+
+async function removeOptOut(phone) {
+  if(!currentUserId) return;
+  await sb.from('opted_out').delete().eq('user_id', currentUserId).eq('phone', phone);
+  optedOutNumbers.delete(phone);
+  renderOptOuts();
+  toast(`${phone} removed from opt-out list`);
 }
 </script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
