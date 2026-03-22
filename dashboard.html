@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WABlast — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{--bg:#050807;--surface:#0c1410;--surface2:#142018;--border:#182418;--green:#00e676;--green-dark:#00c853;--green-glow:rgba(37,211,102,0.12);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--warn:#ffb347;--radius:14px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* NAV */
+    nav{background:rgba(5,8,7,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nav-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .nav-logo-text{font-size:1.1rem;font-weight:800;color:var(--white);}
+    .nav-logo-text span{color:var(--green);}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+    .user-email{font-size:0.8rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .btn-logout{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;}
+    .btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* LAYOUT */
+    .page{max-width:1100px;margin:0 auto;padding:32px 24px;}
+
+    /* WELCOME */
+    .welcome{margin-bottom:32px;}
+    .welcome h1{font-size:1.8rem;font-weight:800;color:var(--white);letter-spacing:-0.5px;margin-bottom:6px;}
+    .welcome p{font-size:0.9rem;color:var(--muted);}
+
+    /* PLAN CARD */
+    .plan-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+    .plan-badge{background:var(--green-glow);border:1px solid rgba(37,211,102,0.25);border-radius:99px;padding:6px 16px;font-size:0.78rem;font-weight:700;color:var(--green);letter-spacing:1px;text-transform:uppercase;}
+    .plan-info{flex:1;}
+    .plan-name{font-size:1.1rem;font-weight:800;color:var(--white);margin-bottom:3px;}
+    .plan-msgs{font-size:0.82rem;color:var(--muted);}
+    .btn-upgrade{background:var(--green);border:none;border-radius:9px;color:#0a0f0d;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.85rem;padding:10px 20px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+    .btn-upgrade:hover{background:var(--green-dark);}
+
+    /* USAGE */
+    .usage-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px;}
+    .card-title{font-size:0.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+    .usage-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .usage-label{font-size:0.85rem;color:var(--text);}
+    .usage-nums{font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--muted);}
+    .usage-nums span{color:var(--white);font-weight:500;}
+    .bar-bg{background:var(--surface2);border-radius:99px;height:8px;overflow:hidden;}
+    .bar-fill{height:100%;background:linear-gradient(90deg,var(--green),#78ffd6);border-radius:99px;transition:width 0.6s ease;}
+
+    /* STATS */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
+    .stat-val{font-size:2rem;font-weight:800;color:var(--white);line-height:1;margin-bottom:4px;}
+    .stat-val.green{color:var(--green);}
+    .stat-val.warn{color:var(--warn);}
+    .stat-label{font-size:0.76rem;color:var(--muted);font-weight:500;}
+
+    /* QUICK ACTIONS */
+    .actions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+    .action-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:block;}
+    .action-card:hover{border-color:rgba(37,211,102,0.3);transform:translateY(-2px);}
+    .action-icon{font-size:1.8rem;margin-bottom:12px;}
+    .action-title{font-size:0.95rem;font-weight:700;color:var(--white);margin-bottom:5px;}
+    .action-sub{font-size:0.78rem;color:var(--muted);}
+
+    /* RECENT */
+    .recent-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;}
+    .empty-state{text-align:center;padding:40px 20px;}
+    .empty-icon{font-size:2.5rem;margin-bottom:12px;}
+    .empty-title{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:6px;}
+    .empty-sub{font-size:0.82rem;color:var(--muted);}
+
+    /* LOADING */
+    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;}
+    .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #loadingScreen p{font-size:0.85rem;color:var(--muted);}
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Loading your dashboard…</p>
+</div>
+
+<nav>
+  <a href="landing.html" class="nav-logo">
+    <div class="nav-logo-icon">💬</div>
+    <div class="nav-logo-text">WA<span>Blast</span></div>
+  </a>
+  <div class="nav-right">
+    <span class="user-email" id="userEmail"></span>
+    <button class="btn-logout" onclick="logout()">Sign out</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="welcome">
+    <h1>Welcome back, <span id="userName" style="color:var(--green)">there</span> 👋</h1>
+    <p>Here's your WABlast overview for this month.</p>
+  </div>
+
+  <!-- PLAN -->
+  <div class="plan-card">
+    <div class="plan-badge">Current Plan</div>
+    <div class="plan-info">
+      <div class="plan-name" id="planName">Starter — 100 messages/month</div>
+      <div class="plan-msgs" id="planMsgs">R99/month · Renews on 1 April 2025</div>
+    </div>
+    <a href="billing.html" class="btn-upgrade">⬆ Upgrade plan</a>
+  </div>
+
+  <!-- USAGE -->
+  <div class="usage-card">
+    <div class="card-title">📊 This month's usage</div>
+    <div class="usage-row">
+      <span class="usage-label">Messages sent</span>
+      <span class="usage-nums"><span id="msgUsed">0</span> / <span id="msgLimit">100</span></span>
+    </div>
+    <div class="bar-bg">
+      <div class="bar-fill" id="usageBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-val green" id="statSent">0</div>
+      <div class="stat-label">Messages sent this month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statContacts">0</div>
+      <div class="stat-label">Total contacts imported</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val warn" id="statRemaining">100</div>
+      <div class="stat-label">Messages remaining</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statCampaigns">0</div>
+      <div class="stat-label">Campaigns run</div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="actions-grid">
+    <a href="index.html" class="action-card">
+      <div class="action-icon">🚀</div>
+      <div class="action-title">Send Messages</div>
+      <div class="action-sub">Import contacts and send your campaign</div>
+    </a>
+    <a href="billing.html" class="action-card">
+      <div class="action-icon">⬆️</div>
+      <div class="action-title">Upgrade Plan</div>
+      <div class="action-sub">Get more messages per month</div>
+    </a>
+    <a href="#" class="action-card" onclick="logout()">
+      <div class="action-icon">🔑</div>
+      <div class="action-title">API Settings</div>
+      <div class="action-sub">Connect your Meta WhatsApp API</div>
+    </a>
+    <a href="landing.html" class="action-card">
+      <div class="action-icon">📖</div>
+      <div class="action-title">Help & Docs</div>
+      <div class="action-sub">Learn how to get the most out of WABlast</div>
+    </a>
+  </div>
+
+  <!-- RECENT CAMPAIGNS -->
+  <div class="recent-card">
+    <div class="card-title">📨 Recent campaigns</div>
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">No campaigns yet</div>
+      <div class="empty-sub">Your sent campaigns will appear here. <a href="index.html" style="color:var(--green);text-decoration:none;">Send your first one →</a></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const PLANS = {
+  starter:    { name:'Starter',    msgs:100,   price:'R99' },
+  basic:      { name:'Basic',      msgs:500,   price:'R199' },
+  growth:     { name:'Growth',     msgs:1000,  price:'R349' },
+  pro:        { name:'Pro',        msgs:2000,  price:'R599' },
+  business:   { name:'Business',   msgs:5000,  price:'R1,199' },
+  enterprise: { name:'Enterprise', msgs:10000, price:'R2,099' },
+};
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) { window.location.href = 'auth.html'; return; }
+
+  const user = session.user;
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+  document.getElementById('userName').textContent  = name;
+  document.getElementById('userEmail').textContent = user.email;
+
+  // Handle PayFast return
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('payment') === 'success') {
+    const pendingPlan = localStorage.getItem('wablast_pending_plan');
+    if(pendingPlan) {
+      await sb.auth.updateUser({ data: { plan: pendingPlan } });
+      // Top up credits for new plan
+      const limit = PLANS[pendingPlan]?.msgs || 100;
+      await sb.from('user_credits').upsert({
+        user_id: user.id, credits_remaining: limit, plan: pendingPlan,
+        updated_at: new Date().toISOString()
+      });
+      localStorage.removeItem('wablast_pending_plan');
+      window.history.replaceState({}, '', 'dashboard.html');
+    }
+  }
+
+  // Plan info
+  const planKey = user.user_metadata?.plan || 'starter';
+  const p = PLANS[planKey] || PLANS.starter;
+  document.getElementById('planName').textContent = `${p.name} — ${p.msgs.toLocaleString()} messages/month`;
+  document.getElementById('planMsgs').textContent = `${p.price}/month`;
+  document.getElementById('msgLimit').textContent = p.msgs.toLocaleString();
+
+  // Load credits from Supabase
+  const { data: credData } = await sb
+    .from('user_credits')
+    .select('credits_remaining')
+    .eq('user_id', user.id)
+    .single();
+
+  const creditsRemaining = credData?.credits_remaining ?? p.msgs;
+  const used = p.msgs - creditsRemaining;
+  const pct  = Math.min(100, Math.round((used / p.msgs) * 100));
+
+  document.getElementById('msgUsed').textContent          = Math.max(0, used).toLocaleString();
+  document.getElementById('usageBar').style.width         = pct + '%';
+  document.getElementById('statRemaining').textContent    = creditsRemaining.toLocaleString();
+  document.getElementById('statSent').textContent         = Math.max(0, used).toLocaleString();
+
+  // Load usage logs for campaigns count + recent sessions
+  const now        = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data: logs } = await sb
+    .from('usage_logs')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('created_at', monthStart)
+    .order('created_at', { ascending: false });
+
+  const campaigns  = (logs || []).length;
+  const totalSent  = (logs || []).reduce((s, r) => s + (r.sent || 0), 0);
+  document.getElementById('statCampaigns').textContent = campaigns;
+  document.getElementById('statContacts').textContent  = totalSent; // total messages sent = effective reach
+
+  // Recent campaigns table
+  const recentCard = document.querySelector('.recent-card');
+  if(logs && logs.length > 0) {
+    recentCard.innerHTML = `
+      <div class="card-title">📨 Recent campaigns</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+        <thead>
+          <tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--border);">
+            <th style="padding:8px 0;">Date</th>
+            <th style="padding:8px 0;">Mode</th>
+            <th style="padding:8px 0;">Sent</th>
+            <th style="padding:8px 0;">Failed</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logs.slice(0,10).map(r => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:10px 0;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;">${new Date(r.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+              <td style="padding:10px 0;"><span style="background:var(--surface2);padding:2px 8px;border-radius:99px;font-size:0.72rem;text-transform:capitalize;">${r.mode||'blaster'}</span></td>
+              <td style="padding:10px 0;color:var(--green);font-weight:700;">${r.sent||0}</td>
+              <td style="padding:10px 0;color:var(--danger);">${r.failed||0}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  document.getElementById('loadingScreen').style.display = 'none';
+});
+
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'auth.html';
+}
+</script>
+</body>
+</html>
