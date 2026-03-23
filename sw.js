@@ -1,4 +1,4 @@
-const CACHE = 'wa-blast-v2';
+const CACHE = 'wa-blast-v3';
 const ASSETS = [
   '/wablast/',
   '/wablast/index.html',
