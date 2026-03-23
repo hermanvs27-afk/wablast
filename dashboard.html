@@ -204,6 +204,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userName').textContent  = name;
   document.getElementById('userEmail').textContent = user.email;
 
+  // Check if account is suspended
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('suspended')
+    .eq('user_id', user.id)
+    .single();
+
+  if(profile?.suspended === true) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.querySelector('.page').innerHTML = `
+      <div style="text-align:center;padding:80px 24px;">
+        <div style="font-size:3rem;margin-bottom:16px;">🚫</div>
+        <h2 style="font-size:1.5rem;font-weight:800;color:var(--danger);margin-bottom:10px;">Account Suspended</h2>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:400px;margin:0 auto 24px;line-height:1.7;">Your WABlast account has been suspended. Please contact support to resolve this.</p>
+        <a href="mailto:hermanvs27@gmail.com" style="background:var(--green);color:#0a0f0d;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Contact Support</a>
+      </div>`;
+    return;
+  }
+
   // Handle PayFast return
   // NOTE: We do NOT upgrade the plan here — that is done server-side by the
   // payfast-notify Edge Function after PayFast signature verification.
