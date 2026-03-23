@@ -245,6 +245,32 @@
   </div>
 </div>
 
+<!-- ASSIGN NUMBER MODAL -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <h3>Assign WhatsApp number</h3>
+    <p id="assignModalDesc">Select which number to assign to this client.</p>
+    <div class="modal-field">
+      <label>Phone number</label>
+      <select id="assignNumberSelect">
+        <option value="">Loading numbers...</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Or add a new number</label>
+      <input type="text" id="assignNewDisplay" placeholder="Display number e.g. +27 82 123 4567"/>
+    </div>
+    <div class="modal-field">
+      <label>Phone Number ID (from Meta)</label>
+      <input type="text" id="assignNewPhoneId" placeholder="e.g. 1234567890123"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal confirm" onclick="confirmAssignNumber()">Assign number</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
@@ -379,6 +405,7 @@ function renderUsers(users) {
         </td>
         <td>
           <div class="actions-cell">
+            ${!isAdmin?`<button class="btn-action" onclick="openAssignModal('${u.id}','${name}')">Assign number</button>`:''}
             ${!isAdmin?`<button class="btn-action" onclick="openEditModal('${u.id}','${name}','${plan}')">Change plan</button>`:''}
             ${!isAdmin?`<button class="btn-action danger" onclick="openSuspendModal('${u.id}','${name}')">Suspend</button>`:''}
             ${isAdmin?'<span style="font-size:0.75rem;color:var(--muted);">Admin</span>':''}
@@ -440,11 +467,81 @@ async function confirmSuspend() {
   await loadUsers();
 }
 
+// ── Assign Number Modal ──
+let assigningUserId = null;
+let availableNumbers = [];
+
+async function openAssignModal(userId, name) {
+  assigningUserId = userId;
+  document.getElementById('assignModalDesc').textContent = `Assign a WhatsApp number to ${name}`;
+  document.getElementById('assignNewDisplay').value  = '';
+  document.getElementById('assignNewPhoneId').value  = '';
+
+  // Load available numbers from assigned_numbers table
+  const { data: numbers } = await sb
+    .from('assigned_numbers')
+    .select('id, display_number, phone_number_id, user_id')
+    .eq('active', true);
+
+  availableNumbers = numbers || [];
+  const sel = document.getElementById('assignNumberSelect');
+  sel.innerHTML = '<option value="">— Select existing number —</option>' +
+    availableNumbers
+      .filter(n => !n.user_id) // unassigned only
+      .map(n => `<option value="${n.id}">${n.display_number}</option>`)
+      .join('') +
+    (availableNumbers.filter(n => !n.user_id).length === 0
+      ? '<option value="" disabled>No unassigned numbers — add a new one below</option>'
+      : '');
+
+  document.getElementById('assignModal').classList.add('open');
+}
+
+async function confirmAssignNumber() {
+  if(!assigningUserId) return;
+
+  const selectedId     = document.getElementById('assignNumberSelect').value;
+  const newDisplay     = document.getElementById('assignNewDisplay').value.trim();
+  const newPhoneId     = document.getElementById('assignNewPhoneId').value.trim();
+
+  if(!selectedId && (!newDisplay || !newPhoneId)) {
+    alert('Either select an existing number or fill in both new number fields.');
+    return;
+  }
+
+  if(selectedId) {
+    // Assign existing number to this user
+    const { error } = await sb
+      .from('assigned_numbers')
+      .update({ user_id: assigningUserId, assigned_at: new Date().toISOString() })
+      .eq('id', selectedId);
+    if(error) { alert('Error assigning number: ' + error.message); return; }
+  } else {
+    // Create new number and assign to this user
+    const { error } = await sb
+      .from('assigned_numbers')
+      .insert({
+        user_id:        assigningUserId,
+        phone_number_id: newPhoneId,
+        display_number: newDisplay,
+        active:         true,
+        assigned_at:    new Date().toISOString()
+      });
+    if(error) { alert('Error creating number: ' + error.message); return; }
+  }
+
+  closeModal();
+  await loadUsers();
+  alert(`✅ Number assigned successfully!`);
+}
+
 function closeModal() {
   document.getElementById('editModal').classList.remove('open');
   document.getElementById('suspendModal').classList.remove('open');
-  editingUserId = null;
+  document.getElementById('assignModal').classList.remove('open');
+  editingUserId    = null;
   suspendingUserId = null;
+  assigningUserId  = null;
 }
 
 async function logout() {
