@@ -182,6 +182,30 @@
   </div>
   <div style="margin-bottom:22px;"></div>
 
+  <!-- NUMBERS MANAGEMENT -->
+  <div class="card" style="margin-bottom:22px;">
+    <div class="card-header">
+      <div class="card-title">📱 WhatsApp numbers</div>
+      <button class="btn-action" style="background:var(--green);color:#050807;border-color:var(--green);font-weight:700;" onclick="openAddNumberModal()">+ Add number</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Number</th>
+            <th>Phone Number ID</th>
+            <th>Assigned to</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="numbersTable">
+          <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">Loading numbers…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- CLIENTS TABLE -->
   <div class="card">
     <div class="card-header">
@@ -194,7 +218,7 @@
           <tr>
             <th>Client</th>
             <th>Plan</th>
-            <th>Messages used</th>
+            <th>Credits</th>
             <th>Joined</th>
             <th>Status</th>
             <th>Actions</th>
@@ -241,6 +265,30 @@
     <div class="modal-actions">
       <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-modal danger" onclick="confirmSuspend()">Suspend client</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD NUMBER MODAL -->
+<div class="modal-overlay" id="addNumberModal">
+  <div class="modal">
+    <h3>Add WhatsApp number</h3>
+    <p>Add a new WABlast number. Get the Phone Number ID from Meta Developers → Your App → WhatsApp → API Setup.</p>
+    <div class="modal-field">
+      <label>Display number</label>
+      <input type="text" id="newNumberDisplay" placeholder="+27 82 123 4567"/>
+    </div>
+    <div class="modal-field">
+      <label>Phone Number ID (from Meta)</label>
+      <input type="text" id="newNumberPhoneId" placeholder="e.g. 1008323572370879"/>
+    </div>
+    <div class="modal-field">
+      <label>Label (optional)</label>
+      <input type="text" id="newNumberLabel" placeholder="e.g. WABlast Number 2"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal confirm" onclick="confirmAddNumber()">Add number</button>
     </div>
   </div>
 </div>
@@ -304,32 +352,41 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadUsers();
+  await loadNumbers();
   document.getElementById('loadingScreen').style.display='none';
 });
 
 // ── Load users ──
 async function loadUsers() {
-  // Query profiles table (must exist in Supabase with RLS allowing admin reads)
   const { data: profiles, error } = await sb
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false });
 
+  // Also load credits for all users
+  const { data: credits } = await sb
+    .from('user_credits')
+    .select('user_id, credits_remaining');
+
+  const creditsMap = {};
+  (credits || []).forEach(c => { creditsMap[c.user_id] = c.credits_remaining; });
+
   if(error || !profiles || profiles.length === 0) {
-    // Fallback: show only current admin user
     const { data:{ user } } = await sb.auth.getUser();
     allUsers = [{
-      id:            user.id,
-      email:         user.email,
-      created_at:    user.created_at,
-      user_metadata: user.user_metadata || {}
+      id:               user.id,
+      email:            user.email,
+      created_at:       user.created_at,
+      credits_remaining: creditsMap[user.id] ?? 0,
+      user_metadata:    user.user_metadata || {}
     }];
   } else {
     allUsers = profiles.map(p => ({
-      id:            p.user_id || p.id,
-      email:         p.email   || '',
-      created_at:    p.created_at,
-      is_admin:      p.is_admin || false,
+      id:               p.user_id || p.id,
+      email:            p.email   || '',
+      created_at:       p.created_at,
+      is_admin:         p.is_admin || false,
+      credits_remaining: creditsMap[p.user_id || p.id] ?? 0,
       user_metadata: {
         full_name: p.full_name || p.name || '',
         plan:      p.plan      || 'none',
@@ -383,8 +440,9 @@ function renderUsers(users) {
   tbody.innerHTML = users.map(u => {
     const name    = u.user_metadata?.full_name || u.email?.split('@')[0] || 'Unknown';
     const plan    = u.user_metadata?.plan || 'none';
-    const msgsUsed = u.user_metadata?.msgs_used || 0;
-    const msgLimit = PLAN_MSGS[plan] || 0;
+    const msgsUsed    = u.user_metadata?.msgs_used || 0;
+    const msgLimit    = PLAN_MSGS[plan] || 0;
+    const credits     = u.credits_remaining ?? '—';
     const joined  = new Date(u.created_at).toLocaleDateString('en-ZA');
     const suspended = u.user_metadata?.suspended || false;
     const isAdmin = u.is_admin === true;
@@ -396,7 +454,7 @@ function renderUsers(users) {
         </td>
         <td><span class="plan-pill ${plan}">${plan}</span></td>
         <td>
-          <span style="font-family:'DM Mono',monospace;font-size:0.8rem;">${msgsUsed.toLocaleString()} / ${msgLimit.toLocaleString()}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.8rem;">${credits} remaining</span>
         </td>
         <td style="font-size:0.8rem;color:var(--muted);">${joined}</td>
         <td>
@@ -465,6 +523,114 @@ async function confirmSuspend() {
   if(error) { alert('Error suspending user: ' + error.message); return; }
   closeModal();
   await loadUsers();
+}
+
+// ── Numbers Management ──
+let allNumbers = [];
+
+async function loadNumbers() {
+  const { data: numbers, error } = await sb
+    .from('assigned_numbers')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  allNumbers = numbers || [];
+  renderNumbers();
+}
+
+function renderNumbers() {
+  const tbody = document.getElementById('numbersTable');
+  if(!allNumbers.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No numbers added yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allNumbers.map(n => {
+    const assignedUser = allNumbers && n.user_id
+      ? (allUsers.find(u => u.id === n.user_id)?.email || n.user_id.substring(0,8)+'...')
+      : '—';
+    const statusColor = !n.active ? 'var(--danger)' : n.user_id ? 'var(--green)' : 'var(--warn)';
+    const statusText  = !n.active ? 'Suspended' : n.user_id ? 'Assigned' : 'Available';
+    return `
+      <tr>
+        <td>
+          <div style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--white);">${n.display_number}</div>
+          <div style="font-size:0.72rem;color:var(--muted);">${n.label||''}</div>
+        </td>
+        <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">${n.phone_number_id}</td>
+        <td style="font-size:0.82rem;color:var(--muted);">${assignedUser}</td>
+        <td>
+          <span style="color:${statusColor};font-size:0.78rem;font-weight:700;">● ${statusText}</span>
+        </td>
+        <td>
+          <div class="actions-cell">
+            ${n.user_id ? `<button class="btn-action" onclick="unassignNumber('${n.id}','${n.display_number}')">Unassign</button>` : `<button class="btn-action" onclick="openAssignModal(null,null,'${n.id}')">Assign</button>`}
+            ${n.active
+              ? `<button class="btn-action danger" onclick="suspendNumber('${n.id}','${n.display_number}')">Suspend</button>`
+              : `<button class="btn-action" onclick="reactivateNumber('${n.id}','${n.display_number}')">Reactivate</button>`}
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ── Add Number ──
+function openAddNumberModal() {
+  document.getElementById('newNumberDisplay').value  = '';
+  document.getElementById('newNumberPhoneId').value  = '';
+  document.getElementById('newNumberLabel').value    = '';
+  document.getElementById('addNumberModal').classList.add('open');
+}
+
+async function confirmAddNumber() {
+  const display  = document.getElementById('newNumberDisplay').value.trim();
+  const phoneId  = document.getElementById('newNumberPhoneId').value.trim();
+  const label    = document.getElementById('newNumberLabel').value.trim();
+  if(!display || !phoneId) { alert('Please fill in both the number and Phone Number ID.'); return; }
+  const { error } = await sb.from('assigned_numbers').insert({
+    display_number:  display,
+    phone_number_id: phoneId,
+    label:           label || 'WABlast Number',
+    active:          true
+  });
+  if(error) { alert('Error adding number: ' + error.message); return; }
+  closeModal();
+  await loadNumbers();
+  alert(`✅ ${display} added successfully!`);
+}
+
+// ── Unassign Number ──
+async function unassignNumber(numberId, displayNumber) {
+  if(!confirm(`Unassign ${displayNumber}? The client will lose access to this number immediately.`)) return;
+  const { error } = await sb
+    .from('assigned_numbers')
+    .update({ user_id: null, assigned_at: null })
+    .eq('id', numberId);
+  if(error) { alert('Error unassigning number: ' + error.message); return; }
+  await loadNumbers();
+  toast(`${displayNumber} unassigned — ready for a new client`);
+}
+
+// ── Suspend Number ──
+async function suspendNumber(numberId, displayNumber) {
+  if(!confirm(`Suspend ${displayNumber}? This will stop all sending from this number.`)) return;
+  const { error } = await sb
+    .from('assigned_numbers')
+    .update({ active: false })
+    .eq('id', numberId);
+  if(error) { alert('Error suspending number: ' + error.message); return; }
+  await loadNumbers();
+  toast(`${displayNumber} suspended`);
+}
+
+// ── Reactivate Number ──
+async function reactivateNumber(numberId, displayNumber) {
+  const { error } = await sb
+    .from('assigned_numbers')
+    .update({ active: true })
+    .eq('id', numberId);
+  if(error) { alert('Error reactivating number: ' + error.message); return; }
+  await loadNumbers();
+  toast(`${displayNumber} reactivated`);
 }
 
 // ── Assign Number Modal ──
@@ -539,6 +705,7 @@ function closeModal() {
   document.getElementById('editModal').classList.remove('open');
   document.getElementById('suspendModal').classList.remove('open');
   document.getElementById('assignModal').classList.remove('open');
+  document.getElementById('addNumberModal').classList.remove('open');
   editingUserId    = null;
   suspendingUserId = null;
   assigningUserId  = null;
@@ -547,6 +714,20 @@ function closeModal() {
 async function logout() {
   await sb.auth.signOut();
   window.location.href = 'auth.html';
+}
+
+function toast(msg) {
+  let el = document.getElementById('adminToast');
+  if(!el) {
+    el = document.createElement('div');
+    el.id = 'adminToast';
+    el.style.cssText = 'position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:0.84rem;box-shadow:0 8px 28px rgba(0,0,0,0.4);z-index:999;transition:all 0.3s ease;opacity:0;transform:translateY(56px);';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(56px)'; }, 3000);
 }
 </script>
 </body>
