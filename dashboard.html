@@ -207,20 +207,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userEmail').textContent = user.email;
 
   // Handle PayFast return
+  // NOTE: We do NOT upgrade the plan here — that is done server-side by the
+  // payfast-notify Edge Function after PayFast signature verification.
+  // This URL is only used to show a "payment received" message to the user.
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment') === 'success') {
-    const pendingPlan = localStorage.getItem('wablast_pending_plan');
-    if(pendingPlan) {
-      await sb.auth.updateUser({ data: { plan: pendingPlan } });
-      // Top up credits for new plan
-      const limit = PLANS[pendingPlan]?.msgs || 100;
-      await sb.from('user_credits').upsert({
-        user_id: user.id, credits_remaining: limit, plan: pendingPlan,
-        updated_at: new Date().toISOString()
-      });
-      localStorage.removeItem('wablast_pending_plan');
-      window.history.replaceState({}, '', 'dashboard.html');
-    }
+    localStorage.removeItem('wablast_pending_plan');
+    window.history.replaceState({}, '', 'dashboard.html');
+    // Show a pending notice — plan activates once PayFast notifies the server
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--green);line-height:1.6;';
+    notice.innerHTML = '✅ <strong>Payment received!</strong> Your plan is being activated — this usually takes less than a minute. Refresh the page shortly to see your updated plan.';
+    document.querySelector('.page').prepend(notice);
   }
 
   // Plan info

@@ -236,8 +236,8 @@
         </div>
       </div>
       <!-- Template fields — shown only when Template is selected -->
-      <div id="templateFields" style="display:none;margin-top:12px;display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div id="templateFields" style="display:none;margin-top:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
           <div class="field">
             <label>Template name (exact, from Meta)</label>
             <input type="text" id="templateName" placeholder="e.g. order_confirmation"/>
@@ -247,7 +247,12 @@
             <input type="text" id="templateLang" placeholder="e.g. en_US" value="en_US"/>
           </div>
         </div>
-        <div class="hint" style="margin-top:6px;">Template must be <strong style="color:var(--green)">Approved</strong> in Meta Business Manager. Name is case-sensitive.</div>
+        <div class="field">
+          <label>Template variables — one per line in order: {{1}}, {{2}}, {{3}}…</label>
+          <textarea id="templateVars" placeholder="e.g.&#10;{name}&#10;{phone}&#10;Special offer" style="min-height:72px;" oninput="updateTemplateVarHint()"></textarea>
+        </div>
+        <div class="hint" id="templateVarHint" style="margin-top:6px;">No variables added — template must have zero {{N}} params, or add variables above.</div>
+        <div class="hint" style="margin-top:4px;">Template must be <strong style="color:var(--green)">Approved</strong> in Meta Business Manager. Name is case-sensitive. Use <code>{name}</code> or <code>{phone}</code> to personalise variables per contact.</div>
       </div>
     </div>
 
@@ -431,6 +436,28 @@ async function startSending() {
   const phoneId = document.getElementById('metaPhoneId').value.trim();
   if(!token||!phoneId) return toast('Enter your Meta API credentials first');
 
+  // ── Credit check before sending ──
+  if(currentUserId) {
+    const { data: credRow } = await sb
+      .from('user_credits')
+      .select('credits_remaining')
+      .eq('user_id', currentUserId)
+      .single();
+    const available = credRow?.credits_remaining ?? 0;
+    // Count opted-out so we don't block based on contacts we'll skip
+    const optedOutCount = contacts.filter(c => optedOutNumbers.has(c.phone)).length;
+    const toSend = contacts.length - optedOutCount;
+    if(available <= 0) {
+      return toast('❌ No credits remaining — upgrade your plan to continue');
+    }
+    if(toSend > available) {
+      const proceed = confirm(
+        `⚠️ You have ${available} credit${available!==1?'s':''} remaining but are trying to send to ${toSend} contacts.\n\nOnly the first ${available} will be sent. Upgrade your plan to send more.\n\nProceed with ${available}?`
+      );
+      if(!proceed) return;
+    }
+  }
+
   stopFlag = false;
   document.getElementById('sendBtn').disabled = true;
   document.getElementById('stopBtn').style.display = 'block';
@@ -439,7 +466,10 @@ async function startSending() {
   renderContacts(); clearLog(); updateStats();
 
   const delay = (parseFloat(document.getElementById('delayInput').value)||1)*1000;
+  // Enforce minimum 1s delay to avoid Meta rate limit Error 130429
+  const safeDelay = Math.max(delay, 1000);
   const url   = `https://graph.facebook.com/v23.0/${phoneId}/messages`;
+  let creditsUsedThisRun = 0;
 
   for(let i=0;i<contacts.length;i++){
     if(stopFlag){log('⏹ Stopped.','info');break;}
@@ -453,18 +483,50 @@ async function startSending() {
       continue;
     }
 
-    c.status='sending'; renderContacts();
+    // Hard credit cap — re-check remaining credits on the fly
+    if(currentUserId) {
+      const { data: credCheck } = await sb
+        .from('user_credits').select('credits_remaining').eq('user_id', currentUserId).single();
+      const remaining = (credCheck?.credits_remaining ?? 0) - creditsUsedThisRun;
+      if(remaining <= 0) {
+        log('⛔ Out of credits — send stopped. Upgrade your plan to continue.','fail');
+        toast('❌ Credits exhausted — upgrade to continue');
+        stopFlag = true;
+        break;
+      }
+    }
 
     try {
       const msgType = document.getElementById('msgType').value;
       const tplName = document.getElementById('templateName').value.trim() || 'hello_world';
       const tplLang = document.getElementById('templateLang').value.trim() || 'en_US';
+
+      // Build components array from the variables textarea
+      // Each line is one variable — resolved against the contact for personalisation
+      let components = [];
+      if(msgType === 'template') {
+        const rawVars = document.getElementById('templateVars').value.trim();
+        if(rawVars) {
+          const params = rawVars.split('\n')
+            .map(v => v.trim())
+            .filter(Boolean)
+            .map(v => ({ type: 'text', text: resolveMsg(v, c) }));
+          if(params.length > 0) {
+            components = [{ type: 'body', parameters: params }];
+          }
+        }
+      }
+
       const body_payload = msgType === 'template'
         ? {
-            messaging_product:'whatsapp',
+            messaging_product: 'whatsapp',
             to: c.phone.replace('+',''),
-            type:'template',
-            template:{ name: tplName, language:{ code: tplLang } }
+            type: 'template',
+            template: {
+              name: tplName,
+              language: { code: tplLang },
+              ...(components.length > 0 && { components })
+            }
           }
         : {
             messaging_product:'whatsapp',
@@ -484,10 +546,23 @@ async function startSending() {
       const data = await res.json();
       if(res.ok && data.messages?.[0]?.id){
         c.status='sent';
+        creditsUsedThisRun++;
         log(`✓ Sent to ${c.phone}${c.name?' ('+c.name+')':''} · ${data.messages[0].id}`,'ok');
       } else {
-        const errMsg = data.error?.message || `HTTP ${res.status}`;
-        throw new Error(errMsg);
+        const errCode = data.error?.code;
+        const errMsg  = data.error?.message || `HTTP ${res.status}`;
+        // Translate common Meta error codes to human-readable messages
+        const friendly = {
+          130429: '⏱ Rate limit hit — slow down sends',
+          131026: '📵 Number not on WhatsApp or blocked',
+          131047: '⏰ 24h session expired — use a template',
+          131042: '💳 Billing issue on your Meta account',
+          132000: '📋 Template not found or not approved',
+          132001: '🔢 Template variable count mismatch',
+          132015: '⛔ Template paused due to user reports',
+          190:    '🔑 Access token expired — generate a new one',
+        }[errCode] || errMsg;
+        throw new Error(friendly + (errCode ? ` (code ${errCode})` : ''));
       }
     } catch(err){
       c.status='failed';
@@ -495,7 +570,7 @@ async function startSending() {
     }
 
     renderContacts(); updateStats(); updateProgress(i+1,contacts.length);
-    if(i<contacts.length-1&&!stopFlag&&delay>0) await sleep(delay);
+    if(i<contacts.length-1&&!stopFlag) await sleep(safeDelay);
   }
 
   document.getElementById('sendBtn').disabled = false;
@@ -571,8 +646,19 @@ function toggleTemplateFields() {
   const isTemplate = document.getElementById('msgType').value === 'template';
   document.getElementById('templateFields').style.display = isTemplate ? 'block' : 'none';
   document.getElementById('msgText').placeholder = isTemplate
-    ? 'Template variables (optional — only needed if your template has {{1}} params)'
+    ? 'Optional: plain text fallback or notes (not sent in template mode)'
     : 'Type your message...';
+}
+
+function updateTemplateVarHint() {
+  const raw = document.getElementById('templateVars').value.trim();
+  const lines = raw ? raw.split('\n').filter(Boolean) : [];
+  const hint = document.getElementById('templateVarHint');
+  if(lines.length === 0) {
+    hint.textContent = 'No variables added — template must have zero {{N}} params, or add variables above.';
+  } else {
+    hint.textContent = `${lines.length} variable${lines.length>1?'s':''} → ${lines.map((_,i)=>`{{${i+1}}}`).join(', ')} will be sent.`;
+  }
 }
 
 let currentMode = 'blaster';
@@ -726,8 +812,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadOptOuts() {
-  if(!currentUserId) return;
-  const { data, error } = await sb.from('opted_out').select('phone').eq('user_id', currentUserId);
+  // global_optouts is shared across all clients — no user_id filter
+  const { data, error } = await sb
+    .from('global_optouts')
+    .select('phone')
+    .eq('status', 'opted_out');
   if(error) { console.warn('Opt-out load error:', error); return; }
   optedOutNumbers = new Set((data||[]).map(r => r.phone));
   renderOptOuts();
@@ -751,7 +840,10 @@ async function addOptOut() {
   if(optedOutNumbers.has(phone)) return toast('Already on opt-out list');
   if(!currentUserId) return toast('Please sign in to use opt-out list');
 
-  const { error } = await sb.from('opted_out').insert({ user_id: currentUserId, phone });
+  const { error } = await sb.from('global_optouts').upsert(
+    { phone, status: 'opted_out', opted_out_at: new Date().toISOString() },
+    { onConflict: 'phone' }
+  );
   if(error) { toast('Error saving opt-out'); console.error(error); return; }
   optedOutNumbers.add(phone);
   input.value = '';
@@ -760,8 +852,10 @@ async function addOptOut() {
 }
 
 async function removeOptOut(phone) {
-  if(!currentUserId) return;
-  await sb.from('opted_out').delete().eq('user_id', currentUserId).eq('phone', phone);
+  // Mark as opted_in rather than deleting — keeps the audit trail
+  await sb.from('global_optouts')
+    .update({ status: 'opted_in' })
+    .eq('phone', phone);
   optedOutNumbers.delete(phone);
   renderOptOuts();
   toast(`${phone} removed from opt-out list`);
