@@ -179,33 +179,16 @@
       <button class="mode-btn" id="modeSender" onclick="setMode('sender')">📱 Sender — Send via Your WhatsApp</button>
     </div>
 
-    <!-- SETUP GUIDE -->
-    <div class="notice" id="setupGuide">
-      <strong>🔑 One-time Meta setup — takes ~5 minutes</strong>
-      <div class="setup-steps">
-        <div class="step"><div class="step-num">1</div><span>Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> → Create App → Business type</span></div>
-        <div class="step"><div class="step-num">2</div><span>Add <strong>WhatsApp</strong> product to your app → go to WhatsApp → Getting Started</span></div>
-        <div class="step"><div class="step-num">3</div><span>Copy your <strong>Phone Number ID</strong> and <strong>Access Token</strong> from the dashboard</span></div>
-        <div class="step"><div class="step-num">4</div><span>Paste them below — your number is now your sender. Clients reply directly to you ✅</span></div>
-      </div>
-    </div>
-
-    <!-- META CREDENTIALS -->
-    <div class="card">
-      <div class="card-title">🔑 Meta API Credentials <span class="saved" id="credsSaved">✓ saved</span></div>
-      <div class="creds-grid">
-        <div class="field">
-          <label>Access Token</label>
-          <input type="password" id="metaToken" placeholder="EAAxxxxxxx..." oninput="saveCreds()"/>
+    <!-- ASSIGNED NUMBER DISPLAY -->
+    <div class="card" id="numberCard">
+      <div class="card-title">📱 Your WhatsApp Number</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--green);letter-spacing:1px;" id="assignedNumberDisplay">
+          Loading...
         </div>
-        <div class="field">
-          <label>Phone Number ID</label>
-          <input type="text" id="metaPhoneId" placeholder="1234567890" oninput="saveCreds()"/>
+        <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;" id="numberStatus">
+          Checking your assigned number...
         </div>
-      </div>
-      <div class="creds-note">
-        Found in <a href="https://developers.facebook.com" target="_blank">Meta for Developers</a> → Your App → WhatsApp → API Setup.
-        Free tier: <code>1,000 conversations/month</code>. Messages send from <strong>your own WhatsApp Business number</strong> — clients reply directly to you.
       </div>
     </div>
 
@@ -300,31 +283,32 @@ let contacts = [], stopFlag = false, xlsxRows = [];
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
-  loadCreds();
   document.getElementById('phoneInput').addEventListener('keydown', e => { if(e.key==='Enter') addContact(); });
 });
 
-// ── Credentials ──
-function saveCreds() {
-  localStorage.setItem('wablast_meta', JSON.stringify({
-    token:   document.getElementById('metaToken').value.trim(),
-    phoneId: document.getElementById('metaPhoneId').value.trim()
-  }));
-  document.getElementById('credsSaved').style.display = 'inline';
-  if(document.getElementById('metaToken').value.trim()) {
-    document.getElementById('setupGuide').style.display = 'none';
+
+// ── Load assigned number for this user ──
+async function loadAssignedNumber() {
+  const { data, error } = await sb
+    .from('assigned_numbers')
+    .select('display_number, active')
+    .eq('user_id', currentUserId)
+    .eq('active', true)
+    .single();
+
+  const display = document.getElementById('assignedNumberDisplay');
+  const status  = document.getElementById('numberStatus');
+
+  if(error || !data) {
+    display.textContent = 'No number assigned';
+    display.style.color = 'var(--danger)';
+    status.textContent  = '⚠️ Contact support to get a number assigned to your account.';
+    document.getElementById('sendBtn').disabled = true;
+  } else {
+    display.textContent = data.display_number;
+    display.style.color = 'var(--green)';
+    status.textContent  = '✅ Active — messages will send from this number. Clients reply directly to you.';
   }
-}
-function loadCreds() {
-  try {
-    const c = JSON.parse(localStorage.getItem('wablast_meta')||'{}');
-    if(c.token)   { document.getElementById('metaToken').value   = c.token;   }
-    if(c.phoneId) { document.getElementById('metaPhoneId').value = c.phoneId; }
-    if(c.token)   {
-      document.getElementById('credsSaved').style.display = 'inline';
-      document.getElementById('setupGuide').style.display = 'none';
-    }
-  } catch(e){}
 }
 
 // ── Contacts ──
@@ -447,31 +431,28 @@ async function startSending() {
   const msgType = document.getElementById('msgType').value;
   const msg     = document.getElementById('msgText').value.trim();
   if(!msg && msgType !== 'template') return toast('Write a message first');
-  const token   = document.getElementById('metaToken').value.trim();
-  const phoneId = document.getElementById('metaPhoneId').value.trim();
-  if(!token||!phoneId) return toast('Enter your Meta API credentials first');
+  if(!currentUserId) return toast('Please sign in to send messages');
 
   // ── Credit check before sending ──
-  if(currentUserId) {
-    const { data: credRow } = await sb
-      .from('user_credits')
-      .select('credits_remaining')
-      .eq('user_id', currentUserId)
-      .single();
-    const available = credRow?.credits_remaining ?? 0;
-    // Count opted-out so we don't block based on contacts we'll skip
-    const optedOutCount = contacts.filter(c => optedOutNumbers.has(c.phone)).length;
-    const toSend = contacts.length - optedOutCount;
-    if(available <= 0) {
-      return toast('❌ No credits remaining — upgrade your plan to continue');
-    }
-    if(toSend > available) {
-      const proceed = confirm(
-        `⚠️ You have ${available} credit${available!==1?'s':''} remaining but are trying to send to ${toSend} contacts.\n\nOnly the first ${available} will be sent. Upgrade your plan to send more.\n\nProceed with ${available}?`
-      );
-      if(!proceed) return;
-    }
+  const { data: credRow } = await sb
+    .from('user_credits')
+    .select('credits_remaining')
+    .eq('user_id', currentUserId)
+    .single();
+  const available = credRow?.credits_remaining ?? 0;
+  const optedOutCount = contacts.filter(c => optedOutNumbers.has(c.phone)).length;
+  const toSend = contacts.length - optedOutCount;
+  if(available <= 0) return toast('❌ No credits remaining — upgrade your plan to continue');
+  if(toSend > available) {
+    const proceed = confirm(
+      `⚠️ You have ${available} credit${available!==1?'s':''} remaining but are trying to send to ${toSend} contacts.\n\nOnly the first ${available} will be sent.\n\nProceed?`
+    );
+    if(!proceed) return;
   }
+
+  // Get Supabase session token to authenticate Edge Function call
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return toast('Session expired — please sign in again');
 
   stopFlag = false;
   document.getElementById('sendBtn').disabled = true;
@@ -480,138 +461,97 @@ async function startSending() {
   contacts.forEach(c=>c.status='pending');
   renderContacts(); clearLog(); updateStats();
 
-  const delay = (parseFloat(document.getElementById('delayInput').value)||1)*1000;
-  // Enforce minimum 1s delay to avoid Meta rate limit Error 130429
+  const delay    = (parseFloat(document.getElementById('delayInput').value)||1)*1000;
   const safeDelay = Math.max(delay, 1000);
-  const url   = `https://graph.facebook.com/v23.0/${phoneId}/messages`;
-  let creditsUsedThisRun = 0;
+  const tplName  = document.getElementById('templateName').value.trim() || 'hello_world';
+  const tplLang  = document.getElementById('templateLang').value.trim() || 'en_US';
+  const EDGE_URL = 'https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1/send-message';
 
-  for(let i=0;i<contacts.length;i++){
-    if(stopFlag){log('⏹ Stopped.','info');break;}
-    const c=contacts[i];
+  for(let i=0; i<contacts.length; i++){
+    if(stopFlag){ log('⏹ Stopped.','info'); break; }
+    const c = contacts[i];
 
     // Skip opted-out numbers
     if(optedOutNumbers.has(c.phone)) {
-      c.status='failed';
-      log(`⛔ Skipped ${c.phone} — opted out`,'fail');
-      renderContacts(); updateStats(); updateProgress(i+1,contacts.length);
+      c.status = 'failed';
+      log(`⛔ Skipped ${c.phone} — opted out`, 'fail');
+      renderContacts(); updateStats(); updateProgress(i+1, contacts.length);
       continue;
     }
 
-    // Hard credit cap — re-check remaining credits on the fly
-    if(currentUserId) {
-      const { data: credCheck } = await sb
-        .from('user_credits').select('credits_remaining').eq('user_id', currentUserId).single();
-      const remaining = (credCheck?.credits_remaining ?? 0) - creditsUsedThisRun;
-      if(remaining <= 0) {
-        log('⛔ Out of credits — send stopped. Upgrade your plan to continue.','fail');
-        toast('❌ Credits exhausted — upgrade to continue');
-        stopFlag = true;
-        break;
-      }
-    }
+    c.status = 'sending'; renderContacts();
 
     try {
-      const msgType = document.getElementById('msgType').value;
-      const tplName = document.getElementById('templateName').value.trim() || 'hello_world';
-      const tplLang = document.getElementById('templateLang').value.trim() || 'en_US';
-
-      // Build components array from the variables textarea
-      // Each line is one variable — resolved against the contact for personalisation
-      let components = [];
+      // Build template vars array if needed
+      let templateVars = [];
       if(msgType === 'template') {
         const rawVars = document.getElementById('templateVars').value.trim();
         if(rawVars) {
-          const params = rawVars.split('\n')
+          templateVars = rawVars.split('\n')
             .map(v => v.trim())
             .filter(Boolean)
-            .map(v => ({ type: 'text', text: resolveMsg(v, c) }));
-          if(params.length > 0) {
-            components = [{ type: 'body', parameters: params }];
-          }
+            .map(v => resolveMsg(v, c));
         }
       }
 
-      const body_payload = msgType === 'template'
-        ? {
-            messaging_product: 'whatsapp',
-            to: c.phone.replace('+',''),
-            type: 'template',
-            template: {
-              name: tplName,
-              language: { code: tplLang },
-              ...(components.length > 0 && { components })
-            }
-          }
-        : {
-            messaging_product:'whatsapp',
-            to: c.phone.replace('+',''),
-            type:'text',
-            text:{ body: resolveMsg(msg,c) }
-          };
-
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{
-          'Authorization':'Bearer '+token,
-          'Content-Type':'application/json'
+      // Call Edge Function — token never touches the browser
+      const res = await fetch(EDGE_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body_payload)
+        body: JSON.stringify({
+          to:           c.phone,
+          type:         msgType,
+          message:      resolveMsg(msg, c),
+          templateName: tplName,
+          templateLang: tplLang,
+          templateVars
+        })
       });
+
       const data = await res.json();
-      if(res.ok && data.messages?.[0]?.id){
-        c.status='sent';
-        creditsUsedThisRun++;
-        log(`✓ Sent to ${c.phone}${c.name?' ('+c.name+')':''} · ${data.messages[0].id}`,'ok');
+
+      if(res.ok && data.success) {
+        c.status = 'sent';
+        log(`✓ Sent to ${c.phone}${c.name?' ('+c.name+')':''} · ${data.message_id}`, 'ok');
       } else {
         const errCode = data.error?.code;
         const errMsg  = data.error?.message || `HTTP ${res.status}`;
-        // Translate common Meta error codes to human-readable messages
         const friendly = {
-          130429: '⏱ Rate limit hit — slow down sends',
-          131026: '📵 Number not on WhatsApp or blocked',
-          131047: '⏰ 24h session expired — use a template',
-          131042: '💳 Billing issue on your Meta account',
-          132000: '📋 Template not found or not approved',
-          132001: '🔢 Template variable count mismatch',
-          132015: '⛔ Template paused due to user reports',
-          190:    '🔑 Access token expired — generate a new one',
+          130429:      '⏱ Rate limit hit — slow down sends',
+          131026:      '📵 Number not on WhatsApp or blocked',
+          131047:      '⏰ 24h session expired — use a template',
+          131042:      '💳 Billing issue on Meta account',
+          132000:      '📋 Template not found or not approved',
+          132001:      '🔢 Template variable count mismatch',
+          132015:      '⛔ Template paused due to user reports',
+          190:         '🔑 Access token expired',
+          NO_CREDITS:  '❌ No credits remaining',
+          NO_NUMBER:   '📵 No number assigned — contact support',
         }[errCode] || errMsg;
-        throw new Error(friendly + (errCode ? ` (code ${errCode})` : ''));
+        throw new Error(friendly + (errCode ? ` (${errCode})` : ''));
       }
-    } catch(err){
-      c.status='failed';
-      log(`✗ Failed for ${c.phone}: ${err.message}`,'fail');
+    } catch(err) {
+      c.status = 'failed';
+      log(`✗ Failed for ${c.phone}: ${err.message}`, 'fail');
     }
 
-    renderContacts(); updateStats(); updateProgress(i+1,contacts.length);
-    if(i<contacts.length-1&&!stopFlag) await sleep(safeDelay);
+    renderContacts(); updateStats(); updateProgress(i+1, contacts.length);
+    if(i < contacts.length-1 && !stopFlag) await sleep(safeDelay);
   }
 
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('stopBtn').style.display = 'none';
   const sent   = contacts.filter(c=>c.status==='sent').length;
   const failed = contacts.filter(c=>c.status==='failed').length;
-  log(`Done! ${sent}/${contacts.length} messages sent.`,'info');
+  log(`Done! ${sent}/${contacts.length} messages sent.`, 'info');
   toast(`✅ ${sent} messages sent!`);
 
-  // Deduct credits + log campaign to Supabase
-  if(currentUserId && sent > 0) {
+  // Log campaign to Supabase
+  if(sent > 0) {
     try {
-      // 1. Deduct from user_credits
-      const { data: credRow } = await sb
-        .from('user_credits')
-        .select('credits_remaining')
-        .eq('user_id', currentUserId)
-        .single();
-      if(credRow) {
-        const newBalance = Math.max(0, (credRow.credits_remaining || 0) - sent);
-        await sb.from('user_credits').update({
-          credits_remaining: newBalance,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', currentUserId);
-      }
-      // 2. Log campaign
       await sb.from('usage_logs').insert({
         user_id:    currentUserId,
         sent:       sent,
@@ -872,13 +812,16 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let optedOutNumbers = new Set();
 let currentUserId = null;
 
-// Load opt-outs on startup
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data:{ session } } = await sb.auth.getSession();
     if(session) {
       currentUserId = session.user.id;
       await loadOptOuts();
+      await loadAssignedNumber();
+    } else {
+      // Not signed in — redirect to auth
+      window.location.href = 'auth.html';
     }
   } catch(e) { console.warn('Supabase not connected:', e); }
 });
