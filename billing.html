@@ -82,7 +82,7 @@
 <div class="page">
   <div class="page-header">
     <h1>Choose your plan</h1>
-    <p>All plans include Excel import, personalisation and live delivery reports. Top up at R0.85/message when you run out.</p>
+    <p>All plans include Excel import, personalisation and live delivery reports. Upgrade anytime as your business grows.</p>
   </div>
 
   <div class="pricing-grid" id="pricingGrid">
@@ -120,10 +120,10 @@ const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const PLANS = [
-  { id:'starter', name:'Starter', msgs:100,  price:199, overage:'R0.85', features:['100 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
-  { id:'basic',   name:'Basic',   msgs:200,  price:299, overage:'R0.85', features:['200 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[], popular:true },
-  { id:'growth',  name:'Growth',  msgs:500,  price:599, overage:'R0.85', features:['500 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
-  { id:'pro',     name:'Pro',     msgs:1000, price:999, overage:'R0.85', features:['1,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending','Priority support'], noFeatures:[] },
+  { id:'starter', name:'Starter', msgs:100,  price:199, features:['100 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
+  { id:'basic',   name:'Basic',   msgs:200,  price:299, features:['200 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[], popular:true },
+  { id:'growth',  name:'Growth',  msgs:500,  price:599, features:['500 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
+  { id:'pro',     name:'Pro',     msgs:1000, price:999, features:['1,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending','Priority support'], noFeatures:[] },
 ];
 
 let currentUser = null;
@@ -158,7 +158,6 @@ function renderPlans() {
           <div class="plan-name">${p.name}</div>
           <div class="plan-msgs">${p.msgs.toLocaleString()} messages / month</div>
           <div class="plan-price"><sup>R</sup>${p.price.toLocaleString()}<sub>/mo</sub></div>
-          <div class="plan-overage">Extra: ${p.overage} / message</div>
           <div class="plan-div"></div>
           <ul class="plan-feats">${feats}${noFeats}</ul>
           ${btn}

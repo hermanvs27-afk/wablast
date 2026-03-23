@@ -173,12 +173,6 @@
   <!-- MAIN -->
   <main class="main">
 
-    <!-- MODE SWITCHER -->
-    <div style="display:flex;gap:10px;margin-bottom:4px;">
-      <button class="mode-btn active" id="modeBlaster" onclick="setMode('blaster')">⚡ Blaster — One Click Send All</button>
-      <button class="mode-btn" id="modeSender" onclick="setMode('sender')">📱 Sender — Send via Your WhatsApp</button>
-    </div>
-
     <!-- ASSIGNED NUMBER DISPLAY -->
     <div class="card" id="numberCard">
       <div class="card-title">📱 Your WhatsApp Number</div>
@@ -256,21 +250,6 @@
     <div class="actions" id="blasterPanel">
       <button class="btn-send" id="sendBtn" onclick="startSending()">🚀 Send All Now</button>
       <button class="btn-stop" id="stopBtn" onclick="stopSending()">⏹ Stop</button>
-    </div>
-
-    <!-- SENDER PANEL -->
-    <div id="senderPanel">
-      <div class="sender-contact-card" id="senderCard">
-        <div class="sender-progress" id="senderProgress">Ready to send</div>
-        <div class="sender-name" id="senderName">Import contacts to start</div>
-        <div class="sender-phone" id="senderPhone">Then click Start Sender below</div>
-        <a href="#" id="senderWaBtn" class="btn-open-wa" onclick="senderOpenWA(event)">💬 Open WhatsApp</a>
-        <button class="btn-skip-contact" onclick="senderNext(true)">⏭ Skip this contact</button>
-      </div>
-      <div class="actions">
-        <button class="btn-send" id="senderStartBtn" onclick="startSender()">📱 Start Sender</button>
-        <button class="btn-stop" id="senderStopBtn" style="display:none;" onclick="stopSender()">⏹ Stop</button>
-      </div>
     </div>
 
   </main>
