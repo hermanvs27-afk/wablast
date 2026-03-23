@@ -196,7 +196,7 @@
             <div class="spinner" id="signupSpinner"></div>
           </button>
         </div>
-        <div class="terms">By signing up you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+        <div class="terms">By signing up you agree to our <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>.</div>
       </div>
 
       <div class="switch" id="switchText">
@@ -245,13 +245,28 @@ try {
 }
 
 // ── Check for plan param in URL ──
+const PLAN_NAMES = {
+  'sender':              'Sender — R99/mo',
+  'blaster-shared-100':  'Blaster Shared 100 — R99/mo',
+  'blaster-shared-500':  'Blaster Shared 500 — R199/mo',
+  'blaster-shared-1000': 'Blaster Shared 1000 — R349/mo',
+  'blaster-shared-2000': 'Blaster Shared 2000 — R599/mo',
+  'blaster-shared-5000': 'Blaster Shared 5000 — R999/mo',
+  'dedicated-100':       'Dedicated 100 — R148/mo',
+  'dedicated-500':       'Dedicated 500 — R248/mo',
+  'dedicated-1000':      'Dedicated 1000 — R398/mo',
+  'dedicated-2000':      'Dedicated 2000 — R648/mo',
+  'dedicated-5000':      'Dedicated 5000 — R1,148/mo',
+};
+
 window.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const plan   = params.get('plan');
   const mode   = params.get('mode');
   if(plan) {
     document.getElementById('planBanner').style.display = 'flex';
-    document.getElementById('planBannerText').textContent = `You selected the ${plan} plan`;
+    const friendlyName = PLAN_NAMES[plan] || plan;
+    document.getElementById('planBannerText').textContent = `You selected: ${friendlyName}`;
   }
   if(mode === 'signup') switchTab('signup');
 
