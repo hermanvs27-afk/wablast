@@ -269,247 +269,93 @@
 <section id="pricing">
   <div class="section-eyebrow">Pricing</div>
   <h2 class="section-title">Simple pricing.<br/>No surprises.</h2>
-  <p class="section-sub">Monthly packages with no hidden fees. Need more? Top up at any time.</p>
-  <!-- PRODUCT TABS -->
-  <div style="display:flex;gap:10px;justify-content:center;margin-bottom:32px;flex-wrap:wrap;">
-    <button class="prod-tab active" onclick="showProduct('sender')">📱 Sender</button>
-    <button class="prod-tab" onclick="showProduct('blaster-shared')">📢 Blaster Shared</button>
-    <button class="prod-tab" onclick="showProduct('blaster-dedicated')">⭐ Blaster Dedicated</button>
-  </div>
-  <style>
-    .prod-tab{background:var(--surface);border:1px solid var(--border);border-radius:99px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:0.88rem;padding:10px 24px;cursor:pointer;transition:all 0.2s;}
-    .prod-tab.active,.prod-tab:hover{background:var(--green);color:#050807;border-color:var(--green);}
-    .product-grid{display:none;}.product-grid.active{display:grid;}
-  </style>
+  <p class="section-sub">Monthly packages with no hidden fees. Run out of messages? Top up at R0.85 each.</p>
 
-  <!-- SENDER -->
-  <div class="pricing-grid product-grid active reveal" id="prod-sender">
+  <div class="pricing-grid reveal" style="margin-top:50px;">
+
+    <!-- STARTER -->
     <div class="plan">
       <div class="plan-inner">
-        <div class="plan-name">Sender Starter</div>
-        <div class="plan-msgs">Send via your own WhatsApp</div>
-        <div class="plan-price"><sup>R</sup>99<sub>/mo</sub></div>
-        <div class="plan-overage">No per-message cost · Mobile-first</div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-msgs">100 messages / month</div>
+        <div class="plan-price"><sup>R</sup>199<sub>/mo</sub></div>
+        <div class="plan-overage">Extra messages: R0.85 each</div>
         <div class="plan-div"></div>
         <ul class="plan-feats">
-          <li>Unlimited contacts</li>
+          <li>100 WhatsApp messages</li>
+          <li>One-click send all</li>
           <li>Excel & CSV import</li>
           <li>Message personalisation</li>
           <li>Opt-out management</li>
-          <li>Sends from YOUR number</li>
-          <li>Clients reply directly to you</li>
-          <li class="no">One-click bulk send</li>
-          <li class="no">API sending</li>
+          <li>Live delivery tracking</li>
         </ul>
-        <a href="auth.html?plan=sender&mode=signup" class="btn-plan">Get started</a>
+        <a href="auth.html?plan=starter&mode=signup" class="btn-plan">Get started</a>
       </div>
     </div>
-  </div>
 
-  <!-- BLASTER SHARED -->
-  <div class="pricing-grid product-grid reveal" id="prod-blaster-shared" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));">
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Blaster Shared 100</div>
-        <div class="plan-msgs">100 messages / month</div>
-        <div class="plan-price"><sup>R</sup>99<sub>/mo</sub></div>
-        <div class="plan-overage">Extra: +10% on Meta rate</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>100 bulk messages</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li class="no">Dedicated number</li>
-        </ul>
-        <a href="auth.html?plan=blaster-shared-100&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
+    <!-- BASIC -->
     <div class="plan pop">
       <div class="plan-inner">
-        <div class="plan-name">Blaster Shared 500</div>
+        <div class="plan-name">Basic</div>
+        <div class="plan-msgs">200 messages / month</div>
+        <div class="plan-price"><sup>R</sup>299<sub>/mo</sub></div>
+        <div class="plan-overage">Extra messages: R0.85 each</div>
+        <div class="plan-div"></div>
+        <ul class="plan-feats">
+          <li>200 WhatsApp messages</li>
+          <li>One-click send all</li>
+          <li>Excel & CSV import</li>
+          <li>Message personalisation</li>
+          <li>Opt-out management</li>
+          <li>Live delivery tracking</li>
+        </ul>
+        <a href="auth.html?plan=basic&mode=signup" class="btn-plan">Get started</a>
+      </div>
+    </div>
+
+    <!-- GROWTH -->
+    <div class="plan">
+      <div class="plan-inner">
+        <div class="plan-name">Growth</div>
         <div class="plan-msgs">500 messages / month</div>
-        <div class="plan-price"><sup>R</sup>199<sub>/mo</sub></div>
-        <div class="plan-overage">Extra: +8% on Meta rate</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>500 bulk messages</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li class="no">Dedicated number</li>
-        </ul>
-        <a href="auth.html?plan=blaster-shared-500&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Blaster Shared 1000</div>
-        <div class="plan-msgs">1,000 messages / month</div>
-        <div class="plan-price"><sup>R</sup>349<sub>/mo</sub></div>
-        <div class="plan-overage">Extra: +7% on Meta rate</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>1,000 bulk messages</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li class="no">Dedicated number</li>
-        </ul>
-        <a href="auth.html?plan=blaster-shared-1000&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Blaster Shared 2000</div>
-        <div class="plan-msgs">2,000 messages / month</div>
         <div class="plan-price"><sup>R</sup>599<sub>/mo</sub></div>
-        <div class="plan-overage">Extra: +6% on Meta rate</div>
+        <div class="plan-overage">Extra messages: R0.85 each</div>
         <div class="plan-div"></div>
         <ul class="plan-feats">
-          <li>2,000 bulk messages</li>
+          <li>500 WhatsApp messages</li>
           <li>One-click send all</li>
           <li>Excel & CSV import</li>
-          <li>Personalisation</li>
+          <li>Message personalisation</li>
           <li>Opt-out management</li>
-          <li class="no">Dedicated number</li>
+          <li>Live delivery tracking</li>
         </ul>
-        <a href="auth.html?plan=blaster-shared-2000&mode=signup" class="btn-plan">Get started</a>
+        <a href="auth.html?plan=growth&mode=signup" class="btn-plan">Get started</a>
       </div>
     </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Blaster Shared 5000</div>
-        <div class="plan-msgs">5,000 messages / month</div>
-        <div class="plan-price"><sup>R</sup>999<sub>/mo</sub></div>
-        <div class="plan-overage">Extra: +5% on Meta rate</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>5,000 bulk messages</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li class="no">Dedicated number</li>
-        </ul>
-        <a href="auth.html?plan=blaster-shared-5000&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-  </div>
 
-  <!-- BLASTER DEDICATED -->
-  <div class="pricing-grid product-grid reveal" id="prod-blaster-dedicated" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));">
+    <!-- PRO -->
     <div class="plan">
       <div class="plan-inner">
-        <div class="plan-name">Dedicated 100</div>
-        <div class="plan-msgs">100 messages / month</div>
-        <div class="plan-price"><sup>R</sup>148<sub>/mo</sub></div>
-        <div class="plan-overage">+ R199 once-off setup · +10% on Meta</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>100 bulk messages</li>
-          <li>Your OWN dedicated number</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li>Replies to your number</li>
-        </ul>
-        <a href="auth.html?plan=dedicated-100&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-    <div class="plan pop">
-      <div class="plan-inner">
-        <div class="plan-name">Dedicated 500</div>
-        <div class="plan-msgs">500 messages / month</div>
-        <div class="plan-price"><sup>R</sup>248<sub>/mo</sub></div>
-        <div class="plan-overage">+ R199 once-off setup · +8% on Meta</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>500 bulk messages</li>
-          <li>Your OWN dedicated number</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li>Replies to your number</li>
-        </ul>
-        <a href="auth.html?plan=dedicated-500&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Dedicated 1000</div>
+        <div class="plan-name">Pro</div>
         <div class="plan-msgs">1,000 messages / month</div>
-        <div class="plan-price"><sup>R</sup>398<sub>/mo</sub></div>
-        <div class="plan-overage">+ R199 once-off setup · +7% on Meta</div>
+        <div class="plan-price"><sup>R</sup>999<sub>/mo</sub></div>
+        <div class="plan-overage">Extra messages: R0.85 each</div>
         <div class="plan-div"></div>
         <ul class="plan-feats">
-          <li>1,000 bulk messages</li>
-          <li>Your OWN dedicated number</li>
+          <li>1,000 WhatsApp messages</li>
           <li>One-click send all</li>
           <li>Excel & CSV import</li>
-          <li>Personalisation</li>
+          <li>Message personalisation</li>
           <li>Opt-out management</li>
-          <li>Replies to your number</li>
+          <li>Live delivery tracking</li>
+          <li>Priority support</li>
         </ul>
-        <a href="auth.html?plan=dedicated-1000&mode=signup" class="btn-plan">Get started</a>
+        <a href="auth.html?plan=pro&mode=signup" class="btn-plan">Get started</a>
       </div>
     </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Dedicated 2000</div>
-        <div class="plan-msgs">2,000 messages / month</div>
-        <div class="plan-price"><sup>R</sup>648<sub>/mo</sub></div>
-        <div class="plan-overage">+ R199 once-off setup · +6% on Meta</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>2,000 bulk messages</li>
-          <li>Your OWN dedicated number</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li>Replies to your number</li>
-        </ul>
-        <a href="auth.html?plan=dedicated-2000&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
-    <div class="plan">
-      <div class="plan-inner">
-        <div class="plan-name">Dedicated 5000</div>
-        <div class="plan-msgs">5,000 messages / month</div>
-        <div class="plan-price"><sup>R</sup>1,148<sub>/mo</sub></div>
-        <div class="plan-overage">+ R199 once-off setup · +5% on Meta</div>
-        <div class="plan-div"></div>
-        <ul class="plan-feats">
-          <li>5,000 bulk messages</li>
-          <li>Your OWN dedicated number</li>
-          <li>One-click send all</li>
-          <li>Excel & CSV import</li>
-          <li>Personalisation</li>
-          <li>Opt-out management</li>
-          <li>Replies to your number</li>
-        </ul>
-        <a href="auth.html?plan=dedicated-5000&mode=signup" class="btn-plan">Get started</a>
-      </div>
-    </div>
+
   </div>
-
-  <script>
-  function showProduct(id) {
-    document.querySelectorAll('.product-grid').forEach(g => g.classList.remove('active'));
-    document.querySelectorAll('.prod-tab').forEach(t => t.classList.remove('active'));
-    const grid = document.getElementById('prod-'+id);
-    if(grid) grid.classList.add('active');
-    event.target.classList.add('active');
-  }
-  </script>
 </section>
-
 <!-- TESTIMONIALS -->
 <section id="testimonials">
   <div class="section-eyebrow">Testimonials</div>

@@ -159,10 +159,10 @@
       <div class="action-title">Upgrade Plan</div>
       <div class="action-sub">Get more messages per month</div>
     </a>
-    <a href="#" class="action-card" onclick="logout()">
+    <a href="index.html" class="action-card">
       <div class="action-icon">🔑</div>
-      <div class="action-title">API Settings</div>
-      <div class="action-sub">Connect your Meta WhatsApp API</div>
+      <div class="action-title">Send Messages</div>
+      <div class="action-sub">Connect your Meta API and start sending</div>
     </a>
     <a href="landing.html" class="action-card">
       <div class="action-icon">📖</div>
@@ -189,12 +189,10 @@ const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const PLANS = {
-  starter:    { name:'Starter',    msgs:100,   price:'R99' },
-  basic:      { name:'Basic',      msgs:500,   price:'R199' },
-  growth:     { name:'Growth',     msgs:1000,  price:'R349' },
-  pro:        { name:'Pro',        msgs:2000,  price:'R599' },
-  business:   { name:'Business',   msgs:5000,  price:'R1,199' },
-  enterprise: { name:'Enterprise', msgs:10000, price:'R2,099' },
+  starter:  { name:'Starter', msgs:100,  price:'R199' },
+  basic:    { name:'Basic',   msgs:200,  price:'R299' },
+  growth:   { name:'Growth',  msgs:500,  price:'R599' },
+  pro:      { name:'Pro',     msgs:1000, price:'R999' },
 };
 
 window.addEventListener('DOMContentLoaded', async () => {

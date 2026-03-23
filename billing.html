@@ -82,7 +82,7 @@
 <div class="page">
   <div class="page-header">
     <h1>Choose your plan</h1>
-    <p>All plans include Excel import, personalisation and live delivery reports.</p>
+    <p>All plans include Excel import, personalisation and live delivery reports. Top up at R0.85/message when you run out.</p>
   </div>
 
   <div class="pricing-grid" id="pricingGrid">
@@ -90,7 +90,7 @@
   </div>
 
   <div class="note">
-    Payments processed securely by <a href="https://payfast.io" target="_blank">PayFast</a> 🔒 · All prices in ZAR incl. VAT · Cancel anytime
+    Payments processed securely by <a href="https://payfast.io" target="_blank">PayFast</a> 🔒 · All prices in ZAR · Cancel anytime
   </div>
 </div>
 
@@ -120,12 +120,10 @@ const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const PLANS = [
-  { id:'starter',    name:'Starter',    msgs:100,   price:99,    overage:'R0.55', features:['100 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports'], noFeatures:['Dedicated number','Priority support'] },
-  { id:'basic',      name:'Basic',      msgs:500,   price:199,   overage:'R0.45', features:['500 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports'], noFeatures:['Dedicated number','Priority support'] },
-  { id:'growth',     name:'Growth',     msgs:1000,  price:349,   overage:'R0.40', features:['1,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number'], noFeatures:['Priority support'], popular:true },
-  { id:'pro',        name:'Pro',        msgs:2000,  price:599,   overage:'R0.35', features:['2,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support'], noFeatures:[] },
-  { id:'business',   name:'Business',   msgs:5000,  price:1199,  overage:'R0.30', features:['5,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support'], noFeatures:[] },
-  { id:'enterprise', name:'Enterprise', msgs:10000, price:2099,  overage:'R0.25', features:['10,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Dedicated number','Priority support + onboarding'], noFeatures:[] },
+  { id:'starter', name:'Starter', msgs:100,  price:199, overage:'R0.85', features:['100 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
+  { id:'basic',   name:'Basic',   msgs:200,  price:299, overage:'R0.85', features:['200 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[], popular:true },
+  { id:'growth',  name:'Growth',  msgs:500,  price:599, overage:'R0.85', features:['500 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending'], noFeatures:[] },
+  { id:'pro',     name:'Pro',     msgs:1000, price:999, overage:'R0.85', features:['1,000 WhatsApp messages','Excel & CSV import','Personalisation','Delivery reports','Broadcast sending','Priority support'], noFeatures:[] },
 ];
 
 let currentUser = null;
