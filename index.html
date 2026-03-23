@@ -688,10 +688,30 @@ function resetSenderUI() {
   document.getElementById('senderPhone').textContent      = contacts.length > 0 ? contacts[0].phone : 'Then click Start Sender';
 }
 
-function startSender() {
+async function startSender() {
   if(!contacts.length) return toast('Add contacts first');
   const msg = document.getElementById('msgText').value.trim();
   if(!msg) return toast('Write a message first');
+
+  // Credit check before sender starts
+  if(currentUserId) {
+    const { data: credRow } = await sb
+      .from('user_credits')
+      .select('credits_remaining')
+      .eq('user_id', currentUserId)
+      .single();
+    const available = credRow?.credits_remaining ?? 0;
+    const optedOutCount = contacts.filter(c => optedOutNumbers.has(c.phone)).length;
+    const toSend = contacts.length - optedOutCount;
+    if(available <= 0) return toast('❌ No credits remaining — upgrade your plan');
+    if(toSend > available) {
+      const proceed = confirm(
+        `⚠️ You have ${available} credit${available!==1?'s':''} but are sending to ${toSend} contacts.\n\nOnly the first ${available} will count. Proceed?`
+      );
+      if(!proceed) return;
+    }
+  }
+
   contacts.forEach(c=>c.status='pending');
   renderContacts();
   senderIdx = 0;
@@ -714,14 +734,19 @@ function showSenderContact(idx) {
 
   if(idx >= contacts.length) {
     senderRunning = false;
+    const sent   = contacts.filter(c=>c.status==='sent').length;
+    const failed = contacts.filter(c=>c.status==='failed').length;
     document.getElementById('senderProgress').textContent = '✅ All done!';
-    document.getElementById('senderName').textContent     = `Sent to ${contacts.filter(c=>c.status==='sent').length} contacts`;
+    document.getElementById('senderName').textContent     = `Sent to ${sent} contacts`;
     document.getElementById('senderPhone').textContent    = '';
     document.getElementById('senderWaBtn').style.display  = 'none';
     document.getElementById('senderStartBtn').style.display = 'block';
     document.getElementById('senderStopBtn').style.display  = 'none';
     renderContacts();
     toast('✅ Sender complete!');
+
+    // Deduct credits + log campaign
+    await logSenderCampaign(sent, failed);
     return;
   }
 
@@ -782,12 +807,44 @@ function senderNext(skip=false) {
   showSenderContact(senderIdx + 1);
 }
 
-function stopSender() {
+async function stopSender() {
   senderRunning = false;
   clearTimeout(senderTimer);
   document.getElementById('senderStartBtn').style.display = 'block';
   document.getElementById('senderStopBtn').style.display  = 'none';
   toast('Sender stopped');
+  // Log whatever was sent before stopping
+  const sent   = contacts.filter(c=>c.status==='sent').length;
+  const failed = contacts.filter(c=>c.status==='failed').length;
+  if(sent > 0) await logSenderCampaign(sent, failed);
+}
+
+// ── Sender campaign logger (shared by stopSender + showSenderContact completion) ──
+async function logSenderCampaign(sent, failed) {
+  if(!currentUserId || sent <= 0) return;
+  try {
+    // 1. Deduct credits
+    const { data: credRow } = await sb
+      .from('user_credits')
+      .select('credits_remaining')
+      .eq('user_id', currentUserId)
+      .single();
+    if(credRow) {
+      const newBalance = Math.max(0, (credRow.credits_remaining || 0) - sent);
+      await sb.from('user_credits').update({
+        credits_remaining: newBalance,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', currentUserId);
+    }
+    // 2. Log campaign
+    await sb.from('usage_logs').insert({
+      user_id:    currentUserId,
+      sent:       sent,
+      failed:     failed,
+      mode:       'sender',
+      created_at: new Date().toISOString()
+    });
+  } catch(e) { console.warn('Sender usage log error:', e); }
 }
 
 // ── Supabase + Opt-out ──
