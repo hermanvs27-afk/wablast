@@ -415,11 +415,26 @@ function confirmImport() {
   toast(skipped>0?`Imported ${added} (${skipped} skipped)`:`Imported ${added} contacts`);
 }
 function formatSA(raw) {
-  let n = String(raw).trim().replace(/[\s\-().]/g,'');
-  if(/^0\d/.test(n))       n = '+27'+n.slice(1);
-  else if(/^27\d/.test(n)) n = '+'+n;
-  else if(!/^\+/.test(n))  n = '+27'+n;
-  return n.replace(/[^+\d]/g,'');
+  // Strip all spaces, dashes, brackets, dots
+  let n = String(raw).trim().replace(/[\s\-().]/g, '');
+  // Remove any non-digit/plus characters
+  n = n.replace(/[^+\d]/g, '');
+
+  // Already has a + country code — trust it and return as-is
+  if(n.startsWith('+')) return n;
+
+  // SA local format: starts with 0 → replace with +27
+  if(/^0\d/.test(n)) return '+27' + n.slice(1);
+
+  // SA format without leading zero or plus: 27xxxxxxxxx
+  if(/^27\d{9}$/.test(n)) return '+' + n;
+
+  // Any other number with 7+ digits — assume it needs +27 (SA default)
+  // but only if it looks like a local SA number (9 digits)
+  if(n.length === 9) return '+27' + n;
+
+  // All other cases — return with + prefix as-is (likely already international)
+  return '+' + n;
 }
 
 // ── Message ──
