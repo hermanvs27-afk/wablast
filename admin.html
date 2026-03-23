@@ -248,7 +248,6 @@
 <script>
 const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
-const ADMIN_ID      = 'a8e4dd1c-ef73-476e-ba9d-731adaa368fc';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -262,9 +261,17 @@ let suspendingUserId = null;
 // ── Init ──
 window.addEventListener('DOMContentLoaded', async () => {
   const { data:{ session } } = await sb.auth.getSession();
-
   if(!session) { window.location.href='auth.html'; return; }
-  if(session.user.id !== ADMIN_ID) {
+
+  // Check admin status from profiles table — never trust a hardcoded ID in client code
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('is_admin')
+    .eq('user_id', session.user.id)
+    .single();
+
+  const isAdmin = profile?.is_admin === true;
+  if(!isAdmin) {
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('accessDenied').style.display='flex';
     return;
@@ -296,6 +303,7 @@ async function loadUsers() {
       id:            p.user_id || p.id,
       email:         p.email   || '',
       created_at:    p.created_at,
+      is_admin:      p.is_admin || false,
       user_metadata: {
         full_name: p.full_name || p.name || '',
         plan:      p.plan      || 'none',
@@ -353,7 +361,7 @@ function renderUsers(users) {
     const msgLimit = PLAN_MSGS[plan] || 0;
     const joined  = new Date(u.created_at).toLocaleDateString('en-ZA');
     const suspended = u.user_metadata?.suspended || false;
-    const isAdmin = u.id === ADMIN_ID;
+    const isAdmin = u.is_admin === true;
     return `
       <tr>
         <td>
