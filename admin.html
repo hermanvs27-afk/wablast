@@ -195,6 +195,7 @@
             <th>Number</th>
             <th>Phone Number ID</th>
             <th>Assigned to</th>
+            <th>Token</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -287,12 +288,34 @@
       <input type="text" id="newNumberWabaId" placeholder="e.g. 2116529398888604"/>
     </div>
     <div class="modal-field">
+      <label>Access Token (Meta permanent system user token)</label>
+      <input type="password" id="newNumberToken" placeholder="EAAxxxx…"/>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Each number must have its own token. Get from Meta Business Manager → System Users → Generate Token.</div>
+    </div>
+    <div class="modal-field">
       <label>Label (optional)</label>
       <input type="text" id="newNumberLabel" placeholder="e.g. WABlast Number 3"/>
     </div>
     <div class="modal-actions">
       <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-modal confirm" onclick="confirmAddNumber()">Add number</button>
+    </div>
+  </div>
+</div>
+
+<!-- SET TOKEN MODAL -->
+<div class="modal-overlay" id="setTokenModal">
+  <div class="modal">
+    <h3>Set access token</h3>
+    <p id="setTokenDesc">Update the Meta API access token for this number.</p>
+    <div class="modal-field">
+      <label>Permanent system user token</label>
+      <input type="password" id="setTokenInput" placeholder="EAAxxxx…"/>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Meta Business Manager → System Users → Generate Token → select WABlast app → all permissions.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal confirm" onclick="confirmSetToken()">Save token</button>
     </div>
   </div>
 </div>
@@ -563,6 +586,12 @@ function renderNumbers() {
         <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">${n.phone_number_id}</td>
         <td style="font-size:0.82rem;color:var(--muted);">${assignedUser}</td>
         <td>
+          ${n.access_token
+            ? `<span style="color:var(--green);font-size:0.75rem;font-weight:700;">✓ Set</span>`
+            : `<span style="color:var(--danger);font-size:0.75rem;font-weight:700;">⚠ Missing</span>`}
+          <button class="btn-action" style="margin-left:6px;font-size:0.7rem;padding:3px 8px;" onclick="openSetTokenModal('${n.id}','${n.display_number}')">Set token</button>
+        </td>
+        <td>
           <span style="color:${statusColor};font-size:0.78rem;font-weight:700;">● ${statusText}</span>
         </td>
         <td>
@@ -582,6 +611,7 @@ function openAddNumberModal() {
   document.getElementById('newNumberDisplay').value  = '';
   document.getElementById('newNumberPhoneId').value  = '';
   document.getElementById('newNumberWabaId').value   = '';
+  document.getElementById('newNumberToken').value    = '';
   document.getElementById('newNumberLabel').value    = '';
   document.getElementById('addNumberModal').classList.add('open');
 }
@@ -590,12 +620,15 @@ async function confirmAddNumber() {
   const display  = document.getElementById('newNumberDisplay').value.trim();
   const phoneId  = document.getElementById('newNumberPhoneId').value.trim();
   const wabaId   = document.getElementById('newNumberWabaId').value.trim();
+  const token    = document.getElementById('newNumberToken').value.trim();
   const label    = document.getElementById('newNumberLabel').value.trim();
   if(!display || !phoneId || !wabaId) { alert('Please fill in the number, Phone Number ID and WABA ID.'); return; }
+  if(!token) { alert('Please provide an access token for this number.'); return; }
   const { error } = await sb.from('assigned_numbers').insert({
     display_number:  display,
     phone_number_id: phoneId,
     waba_id:         wabaId,
+    access_token:    token,
     label:           label || 'WABlast Number',
     active:          true
   });
@@ -603,6 +636,27 @@ async function confirmAddNumber() {
   closeModal();
   await loadNumbers();
   toast(`✅ ${display} added successfully!`);
+}
+
+// ── Set Token ──
+let settingTokenNumberId = null;
+function openSetTokenModal(numberId, displayNumber) {
+  settingTokenNumberId = numberId;
+  document.getElementById('setTokenDesc').textContent = `Set access token for ${displayNumber}`;
+  document.getElementById('setTokenInput').value = '';
+  document.getElementById('setTokenModal').classList.add('open');
+}
+async function confirmSetToken() {
+  const token = document.getElementById('setTokenInput').value.trim();
+  if(!token) { alert('Please enter a token.'); return; }
+  const { error } = await sb
+    .from('assigned_numbers')
+    .update({ access_token: token })
+    .eq('id', settingTokenNumberId);
+  if(error) { alert('Error saving token: ' + error.message); return; }
+  closeModal();
+  await loadNumbers();
+  toast('✅ Token saved successfully!');
 }
 
 // ── Unassign Number ──
@@ -713,9 +767,11 @@ function closeModal() {
   document.getElementById('suspendModal').classList.remove('open');
   document.getElementById('assignModal').classList.remove('open');
   document.getElementById('addNumberModal').classList.remove('open');
+  document.getElementById('setTokenModal').classList.remove('open');
   editingUserId    = null;
   suspendingUserId = null;
   assigningUserId  = null;
+  settingTokenNumberId = null;
 }
 
 async function logout() {
