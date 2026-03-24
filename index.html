@@ -214,22 +214,43 @@
       </div>
       <!-- Template fields — shown only when Template is selected -->
       <div id="templateFields" style="display:none;margin-top:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
-          <div class="field">
-            <label>Template name (exact, from Meta)</label>
-            <input type="text" id="templateName" placeholder="e.g. order_confirmation"/>
-          </div>
-          <div class="field">
-            <label>Language code</label>
-            <input type="text" id="templateLang" placeholder="e.g. en_US" value="en_US"/>
-          </div>
-        </div>
+
+        <!-- Template picker -->
         <div class="field">
-          <label>Template variables — one per line in order: {{1}}, {{2}}, {{3}}…</label>
-          <textarea id="templateVars" placeholder="e.g.&#10;{name}&#10;{phone}&#10;Special offer" style="min-height:72px;" oninput="updateTemplateVarHint()"></textarea>
+          <label>Select template</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="templatePicker" onchange="onTemplatePicked()" style="flex:1;">
+              <option value="">— loading templates… —</option>
+            </select>
+            <button class="btn sm ghost" onclick="loadTemplatesForPicker()" title="Refresh templates">↻</button>
+          </div>
+          <div id="tplPickerStatus" style="font-size:0.73rem;color:var(--muted);margin-top:5px;"></div>
         </div>
-        <div class="hint" id="templateVarHint" style="margin-top:6px;">No variables added — template must have zero {{N}} params, or add variables above.</div>
-        <div class="hint" style="margin-top:4px;">Template must be <strong style="color:var(--green)">Approved</strong> in Meta Business Manager. Name is case-sensitive. Use <code>{name}</code> or <code>{phone}</code> to personalise variables per contact.</div>
+
+        <!-- Hidden fields populated automatically from picked template -->
+        <input type="hidden" id="templateName" />
+        <input type="hidden" id="templateLang" value="en_US" />
+
+        <!-- Variable inputs — rendered dynamically -->
+        <div id="templateVarFields" style="display:none;">
+          <div class="field">
+            <label>Template variables — fill in order: {{1}}, {{2}}, {{3}}…</label>
+            <div id="templateVarInputs"></div>
+          </div>
+          <div class="hint" id="templateVarHint" style="margin-top:6px;"></div>
+        </div>
+
+        <!-- Template body preview -->
+        <div id="tplPreviewWrap" style="display:none;margin-top:10px;">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+            <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;">Template preview</div>
+            <div id="tplPreviewBody" style="font-size:0.83rem;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word;"></div>
+            <div id="tplPreviewFooter" style="font-size:0.73rem;color:var(--muted);font-style:italic;margin-top:5px;"></div>
+            <div id="tplPreviewBtns" style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;"></div>
+          </div>
+        </div>
+
+        <div class="hint" style="margin-top:8px;">Use <code>{name}</code> or <code>{phone}</code> in variable values to personalise per contact. Only <strong style="color:var(--green)">Approved</strong> templates can be sent.</div>
       </div>
     </div>
 
@@ -461,16 +482,14 @@ async function startSending() {
     c.status = 'sending'; renderContacts();
 
     try {
-      // Build template vars array if needed
+      // Build template vars array from per-variable inputs
       let templateVars = [];
       if(msgType === 'template') {
-        const rawVars = document.getElementById('templateVars').value.trim();
-        if(rawVars) {
-          templateVars = rawVars.split('\n')
-            .map(v => v.trim())
-            .filter(Boolean)
-            .map(v => resolveMsg(v, c));
-        }
+        const tpl = allFetchedTemplates.find(t => t.name === tplName);
+        const bodyComp = (tpl?.components || []).find(comp => comp.type === 'BODY');
+        const bodyText = bodyComp?.text || '';
+        const vars = [...new Set([...bodyText.matchAll(/\{\{(\d+)\}\}/g)].map(m => parseInt(m[1])))].sort((a,b)=>a-b);
+        templateVars = vars.map(v => resolveMsg(document.getElementById(`tplVar_${v}`)?.value || '', c));
       }
 
       // Call Edge Function — token never touches the browser
@@ -575,25 +594,121 @@ function toast(msg){
   setTimeout(()=>el.classList.remove('show'),3000);
 }
 
-// ── Mode Switching ──
+// ── Mode Switching & Template picker ──
+let allFetchedTemplates = [];
+
 function toggleTemplateFields() {
   const isTemplate = document.getElementById('msgType').value === 'template';
   document.getElementById('templateFields').style.display = isTemplate ? 'block' : 'none';
   document.getElementById('msgText').placeholder = isTemplate
-    ? 'Optional: plain text fallback or notes (not sent in template mode)'
+    ? 'Optional: notes (not sent in template mode)'
     : 'Type your message...';
+  if(isTemplate && !allFetchedTemplates.length) loadTemplatesForPicker();
 }
 
-function updateTemplateVarHint() {
-  const raw = document.getElementById('templateVars').value.trim();
-  const lines = raw ? raw.split('\n').filter(Boolean) : [];
-  const hint = document.getElementById('templateVarHint');
-  if(lines.length === 0) {
-    hint.textContent = 'No variables added — template must have zero {{N}} params, or add variables above.';
-  } else {
-    hint.textContent = `${lines.length} variable${lines.length>1?'s':''} → ${lines.map((_,i)=>`{{${i+1}}}`).join(', ')} will be sent.`;
+async function loadTemplatesForPicker() {
+  const status = document.getElementById('tplPickerStatus');
+  const picker = document.getElementById('templatePicker');
+  status.textContent = '⟳ Loading templates…';
+  picker.innerHTML = '<option value="">— loading… —</option>';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const { data: assigned } = await sb
+      .from('assigned_numbers')
+      .select('waba_id')
+      .eq('user_id', currentUserId)
+      .eq('active', true)
+      .single();
+
+    if(!assigned?.waba_id) {
+      status.textContent = '⚠️ No number assigned — contact support.';
+      return;
+    }
+
+    const res = await fetch(
+      `https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1/manage-template?waba_id=${assigned.waba_id}`,
+      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+    );
+    const data = await res.json();
+    const templates = (data.data || []).filter(t =>
+      t.name !== 'hello_world' && t.status === 'APPROVED'
+    );
+
+    allFetchedTemplates = templates;
+
+    if(!templates.length) {
+      picker.innerHTML = '<option value="">— no approved templates —</option>';
+      status.textContent = '⚠️ No approved templates yet. Create one in Templates.';
+      return;
+    }
+
+    picker.innerHTML = '<option value="">— pick a template —</option>' +
+      templates.map(t => `<option value="${t.name}">${t.name} (${t.language})</option>`).join('');
+    status.textContent = `✓ ${templates.length} approved template${templates.length>1?'s':''} loaded`;
+  } catch(e) {
+    status.textContent = '❌ Failed to load templates — ' + e.message;
   }
 }
+
+function onTemplatePicked() {
+  const name = document.getElementById('templatePicker').value;
+  const tpl  = allFetchedTemplates.find(t => t.name === name);
+
+  document.getElementById('templateName').value = name;
+  document.getElementById('tplPreviewWrap').style.display = 'none';
+  document.getElementById('templateVarFields').style.display = 'none';
+  document.getElementById('templateVarInputs').innerHTML = '';
+
+  if(!tpl) return;
+
+  document.getElementById('templateLang').value = tpl.language || 'en_US';
+
+  // Find body component and extract variables
+  const bodyComp   = (tpl.components || []).find(c => c.type === 'BODY');
+  const footerComp = (tpl.components || []).find(c => c.type === 'FOOTER');
+  const btnComp    = (tpl.components || []).find(c => c.type === 'BUTTONS');
+  const bodyText   = bodyComp?.text || '';
+
+  // Build variable inputs
+  const vars = [...new Set([...bodyText.matchAll(/\{\{(\d+)\}\}/g)].map(m => parseInt(m[1])))].sort((a,b)=>a-b);
+
+  if(vars.length) {
+    const container = document.getElementById('templateVarInputs');
+    container.innerHTML = vars.map(v => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent);min-width:32px;">{{${v}}}</span>
+        <input type="text" id="tplVar_${v}" placeholder="Value for {{${v}}} — use {name} or {phone}" oninput="updateTplPreview()" style="flex:1;height:34px;font-size:0.82rem;" />
+      </div>`).join('');
+    document.getElementById('templateVarFields').style.display = 'block';
+    document.getElementById('templateVarHint').textContent =
+      `${vars.length} variable${vars.length>1?'s':''} → will be filled per contact when sending.`;
+  }
+
+  // Show preview
+  document.getElementById('tplPreviewWrap').style.display = 'block';
+  document.getElementById('tplPreviewFooter').textContent = footerComp?.text || '';
+  document.getElementById('tplPreviewBtns').innerHTML = (btnComp?.buttons || [])
+    .map(b => `<span style="font-size:0.67rem;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--muted);">${b.type}: ${b.text}</span>`)
+    .join('');
+  updateTplPreview();
+}
+
+function updateTplPreview() {
+  const name = document.getElementById('templatePicker').value;
+  const tpl  = allFetchedTemplates.find(t => t.name === name);
+  if(!tpl) return;
+  const bodyComp = (tpl.components || []).find(c => c.type === 'BODY');
+  let text = bodyComp?.text || '';
+  const vars = [...text.matchAll(/\{\{(\d+)\}\}/g)].map(m => parseInt(m[1]));
+  vars.forEach(v => {
+    const val = document.getElementById(`tplVar_${v}`)?.value || `{{${v}}}`;
+    text = text.replace(new RegExp(`\\{\\{${v}\\}\\}`, 'g'), val);
+  });
+  document.getElementById('tplPreviewBody').textContent = text;
+}
+
+function updateTemplateVarHint() {} // kept for compatibility
 
 let currentMode = 'blaster';
 function setMode(mode) {
