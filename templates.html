@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    :root{--bg:#050807;--surface:#0c1410;--surface2:#142018;--border:#182418;--green:#00e676;--green-dark:#00c853;--green-glow:rgba(37,211,102,0.12);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--warn:#ffb347;--radius:14px;}
+    :root{--bg:#050807;--surface:#0c1410;--surface2:#142018;--border:#1e2e22;--green:#00e676;--green-dark:#00c853;--green-glow:rgba(0,230,118,0.1);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--warn:#ffb347;--info:#64b5f6;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
     nav{background:rgba(5,8,7,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
@@ -17,88 +17,104 @@
     .nav-logo-text span{color:var(--green);}
     .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
     .user-email{font-size:0.8rem;color:var(--muted);font-family:'DM Mono',monospace;}
-    .btn-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+    .btn-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;text-decoration:none;}
     .btn-back:hover{border-color:var(--muted);color:var(--white);}
-    .page{max-width:1000px;margin:0 auto;padding:32px 24px;}
-    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+    .page{max-width:1100px;margin:0 auto;padding:32px 24px;}
+    .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:14px;}
     .page-header h1{font-size:1.6rem;font-weight:800;color:var(--white);letter-spacing:-0.5px;}
-    .page-header p{font-size:0.85rem;color:var(--muted);margin-top:4px;}
-    .btn-primary{background:var(--green);border:none;border-radius:10px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.88rem;padding:11px 22px;cursor:pointer;transition:all 0.2s;}
+    .page-header p{font-size:0.85rem;color:var(--muted);margin-top:4px;line-height:1.5;}
+    .btn-primary{background:var(--green);border:none;border-radius:10px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.88rem;padding:11px 22px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
     .btn-primary:hover{background:var(--green-dark);}
-
-    /* TEMPLATE LIST */
+    .info-box{background:var(--green-glow);border:1px solid rgba(0,230,118,0.18);border-radius:12px;padding:14px 18px;font-size:0.82rem;color:var(--text);line-height:1.7;margin-bottom:24px;}
+    .info-box strong{color:var(--green);}
     .templates-grid{display:grid;gap:14px;margin-bottom:32px;}
-    .template-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-    .template-card:hover{border-color:rgba(37,211,102,0.2);}
-    .template-info{flex:1;min-width:200px;}
-    .template-name{font-size:0.95rem;font-weight:700;color:var(--white);margin-bottom:4px;font-family:'DM Mono',monospace;}
-    .template-category{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-    .template-body{font-size:0.82rem;color:var(--text);line-height:1.5;max-width:500px;white-space:pre-wrap;}
-    .status-badge{padding:5px 12px;border-radius:99px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .template-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;transition:border-color 0.2s;}
+    .template-card:hover{border-color:rgba(0,230,118,0.2);}
+    .template-info{flex:1;min-width:220px;}
+    .template-name{font-size:0.95rem;font-weight:700;color:var(--white);margin-bottom:3px;font-family:'DM Mono',monospace;}
+    .template-meta{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+    .template-body{font-size:0.82rem;color:var(--text);line-height:1.55;max-width:520px;white-space:pre-wrap;word-break:break-word;}
+    .template-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+    .status-badge{padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
     .status-badge.approved{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:var(--green);}
     .status-badge.pending{background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.3);color:var(--warn);}
     .status-badge.rejected{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);color:var(--danger);}
     .status-badge.paused{background:rgba(107,143,118,0.1);border:1px solid rgba(107,143,118,0.3);color:var(--muted);}
-    .btn-delete{background:none;border:1px solid var(--border);border-radius:8px;color:var(--danger);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;padding:6px 14px;cursor:pointer;transition:all 0.2s;}
-    .btn-delete:hover{border-color:var(--danger);background:rgba(255,107,107,0.08);}
+    .btn-delete{background:none;border:1px solid var(--border);border-radius:8px;color:var(--danger);font-family:'Bricolage Grotesque',sans-serif;font-size:0.75rem;padding:5px 12px;cursor:pointer;transition:all 0.2s;}
+    .btn-delete:hover{border-color:var(--danger);background:rgba(255,107,107,0.07);}
     .empty-state{text-align:center;padding:60px 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;}
     .empty-icon{font-size:2.5rem;margin-bottom:14px;}
     .empty-title{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:6px;}
-    .empty-sub{font-size:0.82rem;color:var(--muted);line-height:1.6;max-width:360px;margin:0 auto;}
-
-    /* INFO BOX */
-    .info-box{background:var(--green-glow);border:1px solid rgba(0,230,118,0.2);border-radius:12px;padding:14px 18px;font-size:0.82rem;color:var(--text);line-height:1.7;margin-bottom:24px;}
-    .info-box strong{color:var(--green);}
-
-    /* MODAL */
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+    .empty-sub{font-size:0.82rem;color:var(--muted);line-height:1.6;max-width:380px;margin:0 auto;}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.2s;padding:16px;overflow-y:auto;}
     .modal-overlay.open{opacity:1;pointer-events:all;}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.2s;}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:820px;margin:auto;transform:translateY(14px);transition:transform 0.2s;}
     .modal-overlay.open .modal{transform:translateY(0);}
-    .modal h3{font-size:1.2rem;font-weight:800;color:var(--white);margin-bottom:6px;}
-    .modal p{font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+    .modal-header{padding:22px 26px 18px;border-bottom:1px solid var(--border);}
+    .modal-header h3{font-size:1.18rem;font-weight:800;color:var(--white);margin-bottom:3px;}
+    .modal-header p{font-size:0.8rem;color:var(--muted);line-height:1.5;}
+    .modal-body{display:grid;grid-template-columns:1fr 280px;}
+    .modal-form{padding:22px 26px;overflow-y:auto;max-height:72vh;border-right:1px solid var(--border);}
+    .modal-preview-panel{padding:18px;background:rgba(0,0,0,0.3);display:flex;flex-direction:column;gap:10px;border-radius:0 0 18px 0;}
+    .modal-actions{padding:16px 26px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
     .field{margin-bottom:16px;}
-    .field label{display:block;font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
-    .field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;padding:10px 14px;outline:none;transition:border-color 0.2s;}
+    .field-label{display:flex;align-items:center;gap:6px;font-size:0.73rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+    .field-tip{font-size:0.68rem;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:2px 7px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500;cursor:help;display:inline-block;}
+    .field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.86rem;padding:9px 13px;outline:none;transition:border-color 0.2s;}
     .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
-    .field select option{background:var(--surface2);}
-    .field textarea{min-height:100px;resize:vertical;line-height:1.5;}
-    .field .hint{font-size:0.74rem;color:var(--muted);margin-top:6px;line-height:1.5;}
-    .char-count{font-size:0.72rem;color:var(--muted);text-align:right;margin-top:4px;font-family:'DM Mono',monospace;}
-    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+    .field select option{background:#0c1410;}
+    .field textarea{resize:vertical;line-height:1.55;}
+    .field .hint{font-size:0.73rem;color:var(--muted);margin-top:5px;line-height:1.55;}
+    .field .hint.warn{color:var(--warn);}
+    .char-row{display:flex;justify-content:space-between;margin-top:4px;}
+    .char-count{font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .char-count.over{color:var(--danger);}
+    .section-divider{font-size:0.66rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin:20px 0 13px;display:flex;align-items:center;gap:8px;}
+    .section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .header-types{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;}
+    .htype{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 4px;text-align:center;cursor:pointer;transition:all 0.2s;font-size:0.72rem;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;}
+    .htype:hover{border-color:var(--green);color:var(--white);}
+    .htype.active{border-color:var(--green);background:var(--green-glow);color:var(--green);font-weight:700;}
+    .htype .ico{font-size:1.1rem;display:block;margin-bottom:3px;}
+    .var-samples-box{background:var(--bg);border:1px solid var(--warn);border-left:3px solid var(--warn);border-radius:9px;padding:12px;margin-top:8px;}
+    .var-samples-title{font-size:0.72rem;font-weight:700;color:var(--warn);margin-bottom:9px;}
+    .var-row{display:grid;grid-template-columns:70px 1fr;gap:7px;align-items:center;margin-bottom:7px;}
+    .var-lbl{font-size:0.73rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .var-input{background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.82rem;padding:6px 10px;outline:none;width:100%;}
+    .btn-row-wrap{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:8px;}
+    .btn-row-grid{display:grid;grid-template-columns:120px 1fr 28px;gap:7px;align-items:start;margin-bottom:7px;}
+    .btn-row-select{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 9px;outline:none;width:100%;}
+    .btn-row-input{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 9px;outline:none;width:100%;}
+    .btn-row-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:4px;line-height:1;margin-top:4px;}
+    .add-btn-btn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;padding:8px;cursor:pointer;width:100%;transition:all 0.2s;}
+    .add-btn-btn:hover:not(:disabled){border-color:var(--green);color:var(--green);}
+    .add-btn-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .tips-box{background:rgba(100,181,246,0.06);border:1px solid rgba(100,181,246,0.18);border-radius:9px;padding:12px 14px;font-size:0.77rem;color:var(--text);line-height:1.7;margin-top:4px;}
+    .tips-box strong{color:var(--info);}
+    .preview-lbl{font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .phone-mock{background:#111b21;border-radius:12px;padding:14px 11px;min-height:180px;}
+    .p-body{background:#005c4b;border-radius:7px 7px 7px 2px;padding:9px 11px;font-size:0.8rem;color:#e9edef;line-height:1.5;max-width:220px;white-space:pre-wrap;word-break:break-word;}
+    .p-header-txt{font-size:0.86rem;font-weight:700;color:#e9edef;margin-bottom:4px;}
+    .p-header-media{width:100%;height:80px;background:#1d2b34;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6b8f76;font-size:0.75rem;margin-bottom:6px;}
+    .p-footer{font-size:0.7rem;color:#8696a0;margin-top:4px;font-style:italic;}
+    .p-btns{display:flex;flex-direction:column;gap:3px;margin-top:5px;}
+    .p-btn{background:#202c33;border:1px solid #2a3942;border-radius:5px;color:#00a884;font-size:0.75rem;padding:7px;text-align:center;font-weight:600;}
+    .p-note{font-size:0.7rem;color:var(--muted);line-height:1.5;padding-top:6px;}
     .btn-cancel{background:none;border:1px solid var(--border);border-radius:9px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.85rem;padding:10px 20px;cursor:pointer;}
     .btn-cancel:hover{border-color:var(--muted);}
     .btn-submit{background:var(--green);border:none;border-radius:9px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.85rem;padding:10px 22px;cursor:pointer;}
     .btn-submit:hover{background:var(--green-dark);}
     .btn-submit:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
-
-    /* PREVIEW */
-    .preview-box{background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;margin-top:12px;}
-    .preview-label{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-    .preview-bubble{background:#005c4b;border-radius:10px;border-bottom-left-radius:2px;padding:10px 14px;font-size:0.84rem;color:#e9edef;line-height:1.5;max-width:280px;white-space:pre-wrap;}
-    .preview-footer{font-size:0.72rem;color:#8696a0;margin-top:6px;}
-
-    /* BUTTONS SECTION */
-    .btn-fields{border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:8px;}
-    .btn-field-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
-    .btn-add-btn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;padding:8px;cursor:pointer;width:100%;margin-top:4px;transition:all 0.2s;}
-    .btn-add-btn:hover{border-color:var(--green);color:var(--green);}
-    .btn-remove{background:none;border:1px solid var(--border);border-radius:6px;color:var(--danger);font-size:0.75rem;padding:6px 10px;cursor:pointer;height:38px;}
-
-    /* LOADING */
     #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;}
     .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
     #loadingScreen p{font-size:0.85rem;color:var(--muted);}
     ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:99px}
+    @media(max-width:680px){.modal-body{grid-template-columns:1fr}.modal-preview-panel{display:none}.modal-form{max-height:none;border-right:none}}
   </style>
 </head>
 <body>
-
-<div id="loadingScreen">
-  <div class="spinner"></div>
-  <p>Loading templates…</p>
-</div>
+<div id="loadingScreen"><div class="spinner"></div><p>Loading templates…</p></div>
 
 <nav>
   <a href="dashboard.html" class="nav-logo">
@@ -115,380 +131,471 @@
   <div class="page-header">
     <div>
       <h1>📋 Message Templates</h1>
-      <p>Create and manage your Meta-approved WhatsApp message templates.</p>
+      <p>Create and manage your Meta-approved WhatsApp templates. All bulk campaigns require an approved template.</p>
     </div>
-    <button class="btn-primary" onclick="openCreateModal()">+ Create template</button>
+    <button class="btn-primary" onclick="openModal()">+ Create template</button>
   </div>
 
   <div class="info-box">
-    <strong>How templates work:</strong> Meta requires all bulk WhatsApp messages to use approved templates. Submit your template below — Meta usually approves within a few minutes to 24 hours. Once approved, you can select it when sending a campaign. Use <strong>{{1}}</strong>, <strong>{{2}}</strong> etc. for personalised variables like names and property addresses.
+    <strong>How it works:</strong> Submit a template → Meta reviews it (usually minutes to a few hours) → Once <strong>Approved</strong>, use it in your campaigns. Provide sample values for all variables ({{1}}, {{2}}) — Meta uses these to review your content. Templates that are vague, promotional without opt-out, or missing samples get rejected.
   </div>
 
-  <div id="templatesList">
-    <div class="empty-state">
-      <div class="empty-icon">📋</div>
-      <div class="empty-title">No templates yet</div>
-      <div class="empty-sub">Create your first template and submit it for Meta approval. Approved templates can be used immediately in your campaigns.</div>
-    </div>
-  </div>
+  <div id="templatesList"></div>
 </div>
 
-<!-- CREATE TEMPLATE MODAL -->
+<!-- MODAL -->
 <div class="modal-overlay" id="createModal">
   <div class="modal">
-    <h3>Create message template</h3>
-    <p>Fill in the details below. Your template will be submitted to Meta for approval. Names must be lowercase with underscores only.</p>
-
-    <div class="field">
-      <label>Template name</label>
-      <input type="text" id="tplName" placeholder="e.g. new_listing_alert" oninput="sanitizeName(this); updatePreview()"/>
-      <div class="hint">Lowercase letters, numbers and underscores only. No spaces.</div>
+    <div class="modal-header">
+      <h3>Create message template</h3>
+      <p>Build your template below. The preview on the right shows how it will appear on WhatsApp.</p>
     </div>
+    <div class="modal-body">
 
-    <div class="field">
-      <label>Category</label>
-      <select id="tplCategory" onchange="updatePreview()">
-        <option value="MARKETING">Marketing — promotions, offers, announcements</option>
-        <option value="UTILITY">Utility — order updates, account alerts, reminders</option>
-      </select>
-    </div>
+      <!-- FORM -->
+      <div class="modal-form">
 
-    <div class="field">
-      <label>Language</label>
-      <select id="tplLanguage">
-        <option value="en_US">English</option>
-        <option value="af">Afrikaans</option>
-        <option value="zu">Zulu</option>
-        <option value="xh">Xhosa</option>
-      </select>
-    </div>
+        <div class="section-divider">Basics</div>
 
-    <div class="field">
-      <label>Message body</label>
-      <textarea id="tplBody" placeholder="Hi {{1}}, we have a new listing at {{2}}. Price: {{3}}. Reply STOP to opt out." oninput="updatePreview(); updateCharCount()"></textarea>
-      <div class="char-count"><span id="charCount">0</span> / 1024</div>
-      <div class="hint">Use {{1}}, {{2}}, {{3}} etc. for variables. These will be replaced with actual values when sending. Always include opt-out instructions for marketing templates.</div>
-    </div>
+        <div class="field">
+          <div class="field-label">Template name <span class="field-tip" title="Unique identifier. Lowercase, numbers, underscores only. Cannot be changed after submission.">what's this?</span></div>
+          <input type="text" id="tplName" placeholder="e.g. new_listing_alert" maxlength="512" oninput="sanitizeName(this);updatePreview()"/>
+          <div class="hint">Lowercase, numbers and underscores only — no spaces. Must be unique to your account.</div>
+        </div>
 
-    <!-- LIVE PREVIEW -->
-    <div class="preview-box">
-      <div class="preview-label">Preview</div>
-      <div class="preview-bubble" id="previewBubble">Your message will appear here…</div>
-      <div class="preview-footer">Sent via WABlast · WhatsApp Business</div>
-    </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+          <div class="field">
+            <div class="field-label">Category <span class="field-tip" title="Marketing = promotions, listings, offers. Utility = booking confirmations, reminders, alerts. Using the wrong category causes rejection.">important</span></div>
+            <select id="tplCategory" onchange="updatePreview()">
+              <option value="MARKETING">📢 Marketing</option>
+              <option value="UTILITY">🔔 Utility</option>
+            </select>
+            <div class="hint"><strong>Marketing</strong> = promotions &amp; offers.<br/><strong>Utility</strong> = confirmations &amp; alerts.</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Language</div>
+            <select id="tplLanguage">
+              <option value="en_US">English</option>
+              <option value="af">Afrikaans</option>
+              <option value="zu">Zulu</option>
+              <option value="xh">Xhosa</option>
+              <option value="st">Sotho</option>
+            </select>
+            <div class="hint">Must match the language used in your message content.</div>
+          </div>
+        </div>
 
-    <!-- BUTTONS (optional) -->
-    <div class="field" style="margin-top:16px;">
-      <label>Buttons (optional)</label>
-      <div class="btn-fields">
-        <div id="btnFields"></div>
-        <button class="btn-add-btn" onclick="addButton()" id="addBtnBtn">+ Add button (max 2)</button>
+        <div class="section-divider">Header <span style="font-size:0.68rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+
+        <div class="field">
+          <div class="field-label">Header type <span class="field-tip" title="None = text only. Text = bold title. Image/Video/Document = rich media shown above the message. Media is provided at send time.">what's this?</span></div>
+          <div class="header-types">
+            <div class="htype active" onclick="setHType('none',this)"><span class="ico">✕</span>None</div>
+            <div class="htype" onclick="setHType('text',this)"><span class="ico">T</span>Text</div>
+            <div class="htype" onclick="setHType('image',this)"><span class="ico">🖼</span>Image</div>
+            <div class="htype" onclick="setHType('video',this)"><span class="ico">🎥</span>Video</div>
+            <div class="htype" onclick="setHType('document',this)"><span class="ico">📄</span>Doc</div>
+          </div>
+          <div id="hTextWrap" style="display:none;">
+            <input type="text" id="headerText" placeholder="e.g. New Listing Available 🏠" maxlength="60" oninput="updatePreview()"/>
+            <div class="char-row"><div class="hint">Bold title shown above the message. Max 60 characters.</div><span class="char-count" id="hCharCount">0/60</span></div>
+          </div>
+          <div id="hMediaWrap" style="display:none;">
+            <input type="url" id="headerSampleUrl" placeholder="https://example.com/sample.jpg" oninput="updatePreview()"/>
+            <div class="hint warn">⚠️ A sample URL is required by Meta to review your template. This must be a publicly accessible URL of the media type you intend to send. The actual media is uploaded at send time.</div>
+          </div>
+        </div>
+
+        <div class="section-divider">Body <span style="font-size:0.68rem;color:var(--danger);font-weight:400;text-transform:none;letter-spacing:0;">(required)</span></div>
+
+        <div class="field">
+          <div class="field-label">Message body <span class="field-tip" title="The main message text. Use {{1}}, {{2}} etc. as placeholders for personalised values. Variables cannot be at the very start or end of the body.">variables</span></div>
+          <textarea id="tplBody" rows="5" placeholder="Hi {{1}}, we have a new listing in {{2}} that matches your requirements. Contact us for more details." oninput="updatePreview();syncVarSamples();countBody()"></textarea>
+          <div class="char-row"><div class="hint">Use {{1}}, {{2}}, {{3}} for personalised fields like names or addresses. Don't start or end with a variable.</div><span class="char-count" id="bodyChars">0/1024</span></div>
+          <div id="varSamplesWrap" style="display:none;">
+            <div class="var-samples-box">
+              <div class="var-samples-title">⚠️ Meta requires sample values for every variable — without these your template will be rejected.</div>
+              <div id="varSampleFields"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider">Footer <span style="font-size:0.68rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+
+        <div class="field">
+          <div class="field-label">Footer text <span class="field-tip" title="Small italic text shown below the message. Marketing templates must include opt-out instructions here (e.g. 'Reply STOP to opt out').">important for marketing</span></div>
+          <input type="text" id="tplFooter" placeholder="Reply STOP to opt out" maxlength="60" oninput="updatePreview()"/>
+          <div class="char-row"><div class="hint">Marketing templates <strong>must</strong> include opt-out instructions. Max 60 characters. No variables.</div><span class="char-count" id="footerChars">0/60</span></div>
+        </div>
+
+        <div class="section-divider">Buttons <span style="font-size:0.68rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional, max 3)</span></div>
+
+        <div class="field">
+          <div class="field-label">Call-to-action buttons <span class="field-tip" title="Visit Website: opens a URL. Call Phone: dials a number. Quick Reply: sends a pre-set text back to you.">button types</span></div>
+          <div id="btnList"></div>
+          <button class="add-btn-btn" id="addBtnBtn" onclick="addBtn()">+ Add button</button>
+          <div class="hint" style="margin-top:6px;">
+            <strong>Visit Website</strong> — opens a link in the browser<br/>
+            <strong>Call Phone</strong> — dials a phone number with one tap<br/>
+            <strong>Quick Reply</strong> — sends a preset reply back to you
+          </div>
+        </div>
+
+        <div class="tips-box">
+          <strong>Approval tips:</strong><br/>
+          • Be specific — vague templates get rejected<br/>
+          • Always provide sample values for {{1}}, {{2}} etc.<br/>
+          • Marketing templates need footer opt-out<br/>
+          • Don't start or end your body with a variable<br/>
+          • Use Utility (not Marketing) for confirmations &amp; reminders<br/>
+          • Delete rejected templates before resubmitting with a new name
+        </div>
+
       </div>
-      <div class="hint">Add up to 2 call-to-action buttons. Types: Visit Website (URL) or Quick Reply.</div>
-    </div>
 
+      <!-- PREVIEW -->
+      <div class="modal-preview-panel">
+        <div class="preview-lbl">Live preview</div>
+        <div class="phone-mock" id="phonePreview">
+          <div style="font-size:0.76rem;color:#6b8f76;text-align:center;padding:16px 0;">Fill in the form →</div>
+        </div>
+        <div class="p-note">Variables shown as <em style="color:var(--green)">sample values</em>. Actual values are set when sending.</div>
+      </div>
+
+    </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
-      <button class="btn-submit" id="submitBtn" onclick="submitTemplate()">Submit for approval</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitTemplate()">Submit for approval →</button>
     </div>
   </div>
 </div>
+
+<div id="toast" style="position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:0.83rem;box-shadow:0 8px 28px rgba(0,0,0,0.4);z-index:999;transition:all 0.3s;opacity:0;transform:translateY(56px);max-width:320px;line-height:1.5;"></div>
 
 <script>
 const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const EDGE_BASE = 'https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1';
+const EDGE = 'https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1';
 
-let currentUser     = null;
-let myPhoneNumberId = null;
-let myWabaId        = null;
-let buttonCount     = 0;
+let currentUser = null;
+let myWabaId    = null;
+let hType       = 'none';
+let btnCount    = 0;
+let btnSeq      = 0;
 
+// ── INIT ──
 window.addEventListener('DOMContentLoaded', async () => {
   const { data:{ session } } = await sb.auth.getSession();
-  if(!session) { window.location.href = 'auth.html'; return; }
+  if(!session){ window.location.href='auth.html'; return; }
   currentUser = session.user;
   document.getElementById('userEmail').textContent = session.user.email;
 
-  // Get assigned number + waba_id
-  const { data: assigned } = await sb
-    .from('assigned_numbers')
-    .select('phone_number_id, waba_id, display_number')
-    .eq('user_id', currentUser.id)
-    .eq('active', true)
-    .single();
+  const { data: profile } = await sb.from('profiles').select('suspended').eq('user_id',currentUser.id).single();
+  if(profile?.suspended){ window.location.href='dashboard.html'; return; }
 
-  if(!assigned?.waba_id) {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('templatesList').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">⚠️</div>
-        <div class="empty-title">No number assigned</div>
-        <div class="empty-sub">You need a WhatsApp number assigned to your account before you can create templates. Please contact support.</div>
-      </div>`;
+  const { data: assigned } = await sb.from('assigned_numbers')
+    .select('waba_id').eq('user_id',currentUser.id).eq('active',true).single();
+
+  if(!assigned?.waba_id){
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('templatesList').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">No number assigned</div><div class="empty-sub">You need a WhatsApp number assigned before creating templates. Contact support.</div></div>`;
     return;
   }
-
-  myPhoneNumberId = assigned.phone_number_id;
-  myWabaId        = assigned.waba_id;
-
+  myWabaId = assigned.waba_id;
   await loadTemplates();
-  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display='none';
 });
 
-async function loadTemplates() {
+// ── LOAD ──
+async function loadTemplates(){
   const { data:{ session } } = await sb.auth.getSession();
-  try {
-    const res = await fetch(`${EDGE_BASE}/manage-template?waba_id=${myWabaId}`, {
-      headers: { 'Authorization': `Bearer ${session.access_token}` }
-    });
-    const data = await res.json();
-
-    if(!res.ok || !data.data) {
-      document.getElementById('templatesList').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <div class="empty-title">No templates yet</div>
-          <div class="empty-sub">Create your first template and submit it for Meta approval.</div>
-        </div>`;
-      return;
-    }
-
-    const templates = data.data.filter(t => t.name !== 'hello_world');
-    if(!templates.length) {
-      document.getElementById('templatesList').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <div class="empty-title">No templates yet</div>
-          <div class="empty-sub">Create your first template and submit it for Meta approval.</div>
-        </div>`;
-      return;
-    }
-
-    renderTemplates(templates);
-  } catch(err) {
-    console.error('Load templates error:', err);
-  }
+  try{
+    const r = await fetch(`${EDGE}/manage-template?waba_id=${myWabaId}`,{headers:{'Authorization':`Bearer ${session.access_token}`}});
+    const d = await r.json();
+    renderTemplates((d.data||[]).filter(t=>t.name!=='hello_world'));
+  }catch(e){ renderTemplates([]); }
 }
 
-function renderTemplates(templates) {
-  const list = document.getElementById('templatesList');
-  list.innerHTML = `<div class="templates-grid">${templates.map(t => {
-    const bodyComp = t.components?.find(c => c.type === 'BODY');
-    const body     = bodyComp?.text || '(no body)';
-    const status   = (t.status || 'PENDING').toLowerCase();
-    return `
-      <div class="template-card">
-        <div class="template-info">
-          <div class="template-name">${t.name}</div>
-          <div class="template-category">${t.category} · ${t.language}</div>
-          <div class="template-body">${escapeHtml(body)}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
-          <span class="status-badge ${status}">${t.status}</span>
-          <button class="btn-delete" onclick="deleteTemplate('${t.id}','${t.name}')">Delete</button>
-        </div>
-      </div>`;
+function renderTemplates(list){
+  const el = document.getElementById('templatesList');
+  if(!list.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No templates yet</div><div class="empty-sub">Create your first template and submit it for Meta approval. Once approved it will be available in your campaigns.</div></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="templates-grid">${list.map(t=>{
+    const body   = t.components?.find(c=>c.type==='BODY')?.text||'';
+    const header = t.components?.find(c=>c.type==='HEADER');
+    const footer = t.components?.find(c=>c.type==='FOOTER')?.text||'';
+    const btns   = t.components?.find(c=>c.type==='BUTTONS')?.buttons||[];
+    const st     = (t.status||'PENDING').toLowerCase();
+    const hbadge = header?`<span style="font-size:0.67rem;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;color:var(--muted);">${header.format} HEADER</span> `:'';
+    return `<div class="template-card">
+      <div class="template-info">
+        <div class="template-name">${esc(t.name)}</div>
+        <div class="template-meta">${t.category} · ${t.language} ${hbadge}</div>
+        <div class="template-body">${esc(body)}</div>
+        ${footer?`<div style="font-size:0.74rem;color:var(--muted);margin-top:5px;font-style:italic;">${esc(footer)}</div>`:''}
+        ${btns.length?`<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;">${btns.map(b=>`<span style="font-size:0.67rem;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--muted);">${b.type}: ${esc(b.text)}</span>`).join('')}</div>`:''}
+      </div>
+      <div class="template-actions">
+        <span class="status-badge ${st}">${t.status}</span>
+        <button class="btn-delete" onclick="deleteTemplate('${esc(t.name)}')">Delete</button>
+      </div>
+    </div>`;
   }).join('')}</div>`;
 }
 
-// ── CREATE MODAL ──
-function openCreateModal() {
-  buttonCount = 0;
-  document.getElementById('tplName').value    = '';
-  document.getElementById('tplBody').value    = '';
-  document.getElementById('btnFields').innerHTML = '';
-  document.getElementById('charCount').textContent = '0';
-  document.getElementById('addBtnBtn').style.display = 'block';
+// ── MODAL OPEN/CLOSE ──
+function openModal(){
+  hType='none'; btnCount=0; btnSeq=0;
+  ['tplName','tplBody','headerText','headerSampleUrl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tplFooter').value='Reply STOP to opt out';
+  document.getElementById('hTextWrap').style.display='none';
+  document.getElementById('hMediaWrap').style.display='none';
+  document.getElementById('varSamplesWrap').style.display='none';
+  document.getElementById('btnList').innerHTML='';
+  document.getElementById('addBtnBtn').disabled=false;
+  document.querySelectorAll('.htype').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.htype')[0].classList.add('active');
+  ['bodyChars','hCharCount','footerChars'].forEach(id=>{const el=document.getElementById(id); if(el)el.textContent=id==='footerChars'?'22/60':'0/'+(id==='hCharCount'?'60':'1024');});
   updatePreview();
   document.getElementById('createModal').classList.add('open');
 }
 
-function closeCreateModal() {
-  document.getElementById('createModal').classList.remove('open');
+function closeModal(){ document.getElementById('createModal').classList.remove('open'); }
+
+// ── HEADER TYPE ──
+function setHType(type,el){
+  hType=type;
+  document.querySelectorAll('.htype').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('hTextWrap').style.display=type==='text'?'block':'none';
+  document.getElementById('hMediaWrap').style.display=['image','video','document'].includes(type)?'block':'none';
+  updatePreview();
 }
 
-function sanitizeName(el) {
-  el.value = el.value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/__+/g, '_');
+// ── VARIABLE SAMPLES ──
+function syncVarSamples(){
+  const body = document.getElementById('tplBody').value;
+  const vars = [...new Set([...body.matchAll(/\{\{(\d+)\}\}/g)].map(m=>+m[1]))].sort((a,b)=>a-b);
+  const wrap = document.getElementById('varSamplesWrap');
+  const fields = document.getElementById('varSampleFields');
+  if(!vars.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  // Keep existing values
+  const existing={};
+  vars.forEach(v=>{ const el=document.getElementById(`vs_${v}`); if(el) existing[v]=el.value; });
+  fields.innerHTML=vars.map(v=>`
+    <div class="var-row">
+      <span class="var-lbl">{{${v}}}</span>
+      <input class="var-input" id="vs_${v}" placeholder="${getHint(v)}" value="${existing[v]||''}" oninput="updatePreview()"/>
+    </div>`).join('');
 }
 
-function updateCharCount() {
-  const len = document.getElementById('tplBody').value.length;
-  document.getElementById('charCount').textContent = len;
-}
+function getHint(n){ return ['John Smith','Cape Town','3 Bed House','R2 500 000','Monday 10am','your property','our agent'][n-1]||`Value ${n}`; }
 
-function updatePreview() {
-  const body = document.getElementById('tplBody').value || 'Your message will appear here…';
-  // Replace {{N}} with sample values for preview
-  const preview = body
-    .replace(/\{\{1\}\}/g, '[Name]')
-    .replace(/\{\{2\}\}/g, '[Value 2]')
-    .replace(/\{\{3\}\}/g, '[Value 3]')
-    .replace(/\{\{4\}\}/g, '[Value 4]')
-    .replace(/\{\{5\}\}/g, '[Value 5]');
-  document.getElementById('previewBubble').textContent = preview;
+function countBody(){
+  const l=document.getElementById('tplBody').value.length;
+  const el=document.getElementById('bodyChars');
+  el.textContent=`${l}/1024`; el.classList.toggle('over',l>1024);
 }
 
 // ── BUTTONS ──
-function addButton() {
-  if(buttonCount >= 2) return;
-  buttonCount++;
-  const idx = buttonCount;
-  const row = document.createElement('div');
-  row.className = 'btn-field-row';
-  row.id = `btnRow${idx}`;
-  row.innerHTML = `
-    <div class="field" style="margin:0;">
-      <label>Type</label>
-      <select id="btnType${idx}" onchange="toggleBtnUrl(${idx})">
-        <option value="QUICK_REPLY">Quick Reply</option>
-        <option value="URL">Visit Website</option>
+function addBtn(){
+  if(btnCount>=3) return;
+  btnCount++; btnSeq++;
+  const id=btnSeq;
+  const div=document.createElement('div');
+  div.id=`bRow_${id}`; div.className='btn-row-wrap';
+  div.innerHTML=`
+    <div class="btn-row-grid">
+      <select class="btn-row-select" id="bt_${id}" onchange="toggleBtnExtra(${id})">
+        <option value="URL">🔗 Visit Website</option>
+        <option value="PHONE_NUMBER">📞 Call Phone</option>
+        <option value="QUICK_REPLY">↩ Quick Reply</option>
       </select>
+      <input class="btn-row-input" id="btxt_${id}" placeholder="Button label (max 25 chars)" maxlength="25" oninput="updatePreview()"/>
+      <button class="btn-row-remove" onclick="removeBtn(${id})">✕</button>
     </div>
-    <div class="field" style="margin:0;">
-      <label>Button text</label>
-      <input type="text" id="btnText${idx}" placeholder="e.g. View listing" maxlength="25"/>
-    </div>
-    <button class="btn-remove" onclick="removeButton(${idx})">✕</button>`;
-  document.getElementById('btnFields').appendChild(row);
-
-  // URL field (hidden by default)
-  const urlRow = document.createElement('div');
-  urlRow.id = `btnUrlRow${idx}`;
-  urlRow.style.display = 'none';
-  urlRow.style.marginBottom = '8px';
-  urlRow.innerHTML = `
-    <div class="field" style="margin:0;">
-      <label>Website URL</label>
-      <input type="text" id="btnUrl${idx}" placeholder="https://yoursite.co.za"/>
+    <div id="bex_${id}">
+      <input class="btn-row-input" id="burl_${id}" placeholder="https://yourwebsite.co.za" style="width:100%;" oninput="updatePreview()"/>
     </div>`;
-  document.getElementById('btnFields').appendChild(urlRow);
-
-  if(buttonCount >= 2) document.getElementById('addBtnBtn').style.display = 'none';
+  document.getElementById('btnList').appendChild(div);
+  if(btnCount>=3) document.getElementById('addBtnBtn').disabled=true;
 }
 
-function toggleBtnUrl(idx) {
-  const type   = document.getElementById(`btnType${idx}`).value;
-  const urlRow = document.getElementById(`btnUrlRow${idx}`);
-  if(urlRow) urlRow.style.display = type === 'URL' ? 'block' : 'none';
+function toggleBtnExtra(id){
+  const type=document.getElementById(`bt_${id}`).value;
+  const ex=document.getElementById(`bex_${id}`);
+  if(type==='URL') ex.innerHTML=`<input class="btn-row-input" id="burl_${id}" placeholder="https://yourwebsite.co.za" style="width:100%;" oninput="updatePreview()"/>`;
+  else if(type==='PHONE_NUMBER') ex.innerHTML=`<input class="btn-row-input" id="bphone_${id}" placeholder="+27 82 123 4567" style="width:100%;" oninput="updatePreview()"/>`;
+  else ex.innerHTML='';
+  updatePreview();
 }
 
-function removeButton(idx) {
-  document.getElementById(`btnRow${idx}`)?.remove();
-  document.getElementById(`btnUrlRow${idx}`)?.remove();
-  buttonCount--;
-  document.getElementById('addBtnBtn').style.display = 'block';
+function removeBtn(id){
+  document.getElementById(`bRow_${id}`)?.remove();
+  btnCount--;
+  document.getElementById('addBtnBtn').disabled=false;
 }
 
-// ── SUBMIT TEMPLATE ──
-async function submitTemplate() {
-  const name     = document.getElementById('tplName').value.trim();
-  const category = document.getElementById('tplCategory').value;
-  const language = document.getElementById('tplLanguage').value;
-  const body     = document.getElementById('tplBody').value.trim();
+// ── PREVIEW ──
+function sanitizeName(el){ el.value=el.value.toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/__+/g,'_'); }
 
-  if(!name)     { alert('Please enter a template name.'); return; }
-  if(!body)     { alert('Please enter the message body.'); return; }
-  if(body.length > 1024) { alert('Message body is too long (max 1024 characters).'); return; }
+function updatePreview(){
+  // Char counts
+  const ht=document.getElementById('headerText').value||'';
+  const el=document.getElementById('hCharCount'); if(el){ el.textContent=`${ht.length}/60`; }
+  const ft=document.getElementById('tplFooter').value||'';
+  const fe=document.getElementById('footerChars'); if(fe){ fe.textContent=`${ft.length}/60`; }
 
-  // Build components
-  const components = [{ type: 'BODY', text: body }];
+  const rawBody=document.getElementById('tplBody').value||'';
+  // Substitute variable samples
+  let previewBody=rawBody;
+  const vars=[...rawBody.matchAll(/\{\{(\d+)\}\}/g)].map(m=>+m[1]);
+  vars.forEach(v=>{
+    const s=document.getElementById(`vs_${v}`)?.value||getHint(v);
+    previewBody=previewBody.replace(new RegExp(`\\{\\{${v}\\}\\}`,'g'),`<em style="color:#00e676">${esc(s)}</em>`);
+  });
 
-  // Collect buttons
-  const buttons = [];
-  for(let i = 1; i <= 2; i++) {
-    const typeEl = document.getElementById(`btnType${i}`);
-    const textEl = document.getElementById(`btnText${i}`);
-    if(!typeEl || !textEl) continue;
-    const btnText = textEl.value.trim();
-    if(!btnText) continue;
-    if(typeEl.value === 'URL') {
-      const urlEl = document.getElementById(`btnUrl${i}`);
-      buttons.push({ type: 'URL', text: btnText, url: urlEl?.value.trim() || '' });
+  // Header
+  let headerHtml='';
+  if(hType==='text'&&ht) headerHtml=`<div class="p-header-txt">${esc(ht)}</div>`;
+  else if(hType==='image') headerHtml=`<div class="p-header-media">🖼 Image</div>`;
+  else if(hType==='video') headerHtml=`<div class="p-header-media">🎥 Video</div>`;
+  else if(hType==='document') headerHtml=`<div class="p-header-media">📄 Document</div>`;
+
+  // Buttons
+  const btnEls=document.querySelectorAll('[id^="bRow_"]');
+  let btnsHtml='';
+  if(btnEls.length){
+    const btns=[...btnEls].map(r=>{
+      const id=r.id.replace('bRow_','');
+      const type=document.getElementById(`bt_${id}`)?.value;
+      const text=document.getElementById(`btxt_${id}`)?.value||'Button';
+      const ico=type==='URL'?'🔗':type==='PHONE_NUMBER'?'📞':'↩';
+      return `<div class="p-btn">${ico} ${esc(text)}</div>`;
+    }).join('');
+    btnsHtml=`<div class="p-btns">${btns}</div>`;
+  }
+
+  document.getElementById('phonePreview').innerHTML=`
+    ${headerHtml}
+    <div class="p-body">${previewBody||'<span style="color:#6b8f76">Body text will appear here…</span>'}</div>
+    ${ft?`<div class="p-footer">${esc(ft)}</div>`:''}
+    ${btnsHtml}`;
+}
+
+// ── SUBMIT ──
+async function submitTemplate(){
+  const name    =document.getElementById('tplName').value.trim();
+  const category=document.getElementById('tplCategory').value;
+  const language=document.getElementById('tplLanguage').value;
+  const body    =document.getElementById('tplBody').value.trim();
+  const footer  =document.getElementById('tplFooter').value.trim();
+
+  if(!name){alert('Please enter a template name.');return;}
+  if(!body){alert('Please enter the message body.');return;}
+  if(body.length>1024){alert('Body is too long — max 1024 characters.');return;}
+
+  // Collect variable samples
+  const vars=[...new Set([...body.matchAll(/\{\{(\d+)\}\}/g)].map(m=>+m[1]))].sort((a,b)=>a-b);
+  const samples=[];
+  for(const v of vars){
+    const val=document.getElementById(`vs_${v}`)?.value?.trim();
+    if(!val){alert(`Please provide a sample value for {{${v}}}.\n\nMeta requires sample values to review your template — this is the #1 reason templates get rejected.`);return;}
+    samples.push(val);
+  }
+
+  // Components
+  const components=[];
+
+  // Header
+  if(hType==='text'){
+    const ht=document.getElementById('headerText').value.trim();
+    if(ht) components.push({type:'HEADER',format:'TEXT',text:ht});
+  } else if(['image','video','document'].includes(hType)){
+    const url=document.getElementById('headerSampleUrl').value.trim();
+    if(!url){alert(`Please provide a sample ${hType} URL — Meta requires this to review your template.`);return;}
+    components.push({type:'HEADER',format:hType.toUpperCase(),example:{header_handle:[url]}});
+  }
+
+  // Body
+  const bodyComp={type:'BODY',text:body};
+  if(samples.length) bodyComp.example={body_text:[samples]};
+  components.push(bodyComp);
+
+  // Footer — auto-add for marketing if empty
+  const footerText=footer||(category==='MARKETING'?'Reply STOP to opt out':'');
+  if(footerText) components.push({type:'FOOTER',text:footerText});
+
+  // Buttons
+  const btnEls=document.querySelectorAll('[id^="bRow_"]');
+  const buttons=[];
+  btnEls.forEach(r=>{
+    const id=r.id.replace('bRow_','');
+    const type=document.getElementById(`bt_${id}`)?.value;
+    const text=document.getElementById(`btxt_${id}`)?.value?.trim();
+    if(!text) return;
+    if(type==='URL'){
+      const url=document.getElementById(`burl_${id}`)?.value?.trim()||'';
+      if(!url){alert(`Please enter a URL for the "${text}" button.`);return;}
+      buttons.push({type:'URL',text,url});
+    } else if(type==='PHONE_NUMBER'){
+      const phone=document.getElementById(`bphone_${id}`)?.value?.trim()||'';
+      buttons.push({type:'PHONE_NUMBER',text,phone_number:phone});
     } else {
-      buttons.push({ type: 'QUICK_REPLY', text: btnText });
+      buttons.push({type:'QUICK_REPLY',text});
     }
-  }
-  if(buttons.length > 0) {
-    components.push({ type: 'BUTTONS', buttons });
-  }
+  });
+  if(buttons.length) components.push({type:'BUTTONS',buttons});
 
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='Submitting…';
 
-  try {
+  try{
     const { data:{ session } } = await sb.auth.getSession();
-    const res = await fetch(`${EDGE_BASE}/manage-template`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name, category, language, components, waba_id: myWabaId })
+    const res=await fetch(`${EDGE}/manage-template`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${session.access_token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({name,category,language,components,waba_id:myWabaId})
     });
-
-    const data = await res.json();
-
-    if(res.ok && data.id) {
-      closeCreateModal();
+    const data=await res.json();
+    if(res.ok&&data.id){
+      closeModal();
       await loadTemplates();
-      showToast('✅ Template submitted! Meta will review it shortly.');
+      toast('✅ Template submitted! Meta will review it — usually within minutes to a few hours. Refresh to check the status.');
     } else {
-      const errMsg = data.error?.error_user_msg || data.error?.message || JSON.stringify(data);
-      alert(`Failed to submit template:\n\n${errMsg}`);
+      const msg=data.error?.error_user_msg||data.error?.message||data.message||JSON.stringify(data);
+      alert(`Submission failed:\n\n${msg}\n\nCommon fixes:\n• Make sure the template name is unique\n• Check all sample values are filled in\n• Ensure the body doesn't start or end with a variable`);
     }
-  } catch(err) {
-    alert('Error submitting template: ' + err.message);
-  }
+  } catch(e){ alert('Error: '+e.message); }
 
-  btn.disabled = false;
-  btn.textContent = 'Submit for approval';
+  btn.disabled=false; btn.textContent='Submit for approval →';
 }
 
-// ── DELETE TEMPLATE ──
-async function deleteTemplate(templateId, templateName) {
-  if(!confirm(`Delete template "${templateName}"? This cannot be undone.`)) return;
-  try {
+// ── DELETE ──
+async function deleteTemplate(name){
+  if(!confirm(`Delete template "${name}"? This cannot be undone.`)) return;
+  try{
     const { data:{ session } } = await sb.auth.getSession();
-    const res = await fetch(`${EDGE_BASE}/manage-template`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ template_id: templateId, template_name: templateName, waba_id: myWabaId })
+    const res=await fetch(`${EDGE}/manage-template`,{
+      method:'DELETE',
+      headers:{'Authorization':`Bearer ${session.access_token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({template_name:name,waba_id:myWabaId})
     });
-    if(res.ok) {
-      await loadTemplates();
-      showToast('Template deleted.');
-    } else {
-      const data = await res.json();
-      alert('Failed to delete: ' + (data.error?.message || 'Unknown error'));
-    }
-  } catch(err) {
-    alert('Error: ' + err.message);
-  }
+    if(res.ok){ await loadTemplates(); toast('Template deleted.'); }
+    else{ const d=await res.json(); alert('Failed: '+(d.error?.message||'Unknown error')); }
+  } catch(e){ alert('Error: '+e.message); }
 }
 
-function showToast(msg) {
-  let el = document.getElementById('toast');
-  if(!el) {
-    el = document.createElement('div');
-    el.id = 'toast';
-    el.style.cssText = 'position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:0.84rem;box-shadow:0 8px 28px rgba(0,0,0,0.4);z-index:999;transition:all 0.3s ease;opacity:0;transform:translateY(56px);';
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.style.opacity = '1';
-  el.style.transform = 'translateY(0)';
-  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(56px)'; }, 3500);
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.innerHTML=msg; el.style.opacity='1'; el.style.transform='translateY(0)';
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(56px)'; },5000);
 }
-
-function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
 </body>
 </html>
