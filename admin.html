@@ -273,7 +273,7 @@
 <div class="modal-overlay" id="addNumberModal">
   <div class="modal">
     <h3>Add WhatsApp number</h3>
-    <p>Add a new WABlast number. Get the Phone Number ID from Meta Developers → Your App → WhatsApp → API Setup.</p>
+    <p>Add a new WABlast number. Get the Phone Number ID and WABA ID from Meta Developers → Your App → WhatsApp → API Setup.</p>
     <div class="modal-field">
       <label>Display number</label>
       <input type="text" id="newNumberDisplay" placeholder="+27 82 123 4567"/>
@@ -283,8 +283,12 @@
       <input type="text" id="newNumberPhoneId" placeholder="e.g. 1008323572370879"/>
     </div>
     <div class="modal-field">
+      <label>WhatsApp Business Account ID / WABA ID (from Meta)</label>
+      <input type="text" id="newNumberWabaId" placeholder="e.g. 2116529398888604"/>
+    </div>
+    <div class="modal-field">
       <label>Label (optional)</label>
-      <input type="text" id="newNumberLabel" placeholder="e.g. WABlast Number 2"/>
+      <input type="text" id="newNumberLabel" placeholder="e.g. WABlast Number 3"/>
     </div>
     <div class="modal-actions">
       <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
@@ -577,6 +581,7 @@ function renderNumbers() {
 function openAddNumberModal() {
   document.getElementById('newNumberDisplay').value  = '';
   document.getElementById('newNumberPhoneId').value  = '';
+  document.getElementById('newNumberWabaId').value   = '';
   document.getElementById('newNumberLabel').value    = '';
   document.getElementById('addNumberModal').classList.add('open');
 }
@@ -584,18 +589,20 @@ function openAddNumberModal() {
 async function confirmAddNumber() {
   const display  = document.getElementById('newNumberDisplay').value.trim();
   const phoneId  = document.getElementById('newNumberPhoneId').value.trim();
+  const wabaId   = document.getElementById('newNumberWabaId').value.trim();
   const label    = document.getElementById('newNumberLabel').value.trim();
-  if(!display || !phoneId) { alert('Please fill in both the number and Phone Number ID.'); return; }
+  if(!display || !phoneId || !wabaId) { alert('Please fill in the number, Phone Number ID and WABA ID.'); return; }
   const { error } = await sb.from('assigned_numbers').insert({
     display_number:  display,
     phone_number_id: phoneId,
+    waba_id:         wabaId,
     label:           label || 'WABlast Number',
     active:          true
   });
   if(error) { alert('Error adding number: ' + error.message); return; }
   closeModal();
   await loadNumbers();
-  alert(`✅ ${display} added successfully!`);
+  toast(`✅ ${display} added successfully!`);
 }
 
 // ── Unassign Number ──
