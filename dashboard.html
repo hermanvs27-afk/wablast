@@ -77,9 +77,39 @@
     .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
     #loadingScreen p{font-size:0.85rem;color:var(--muted);}
+    /* TOPUP */
+    .topup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px;}
+    .topup-option{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;}
+    .topup-option:hover{border-color:var(--green);transform:translateY(-2px);}
+    .topup-option.selected{border-color:var(--green);background:var(--green-glow);}
+    .topup-msgs{font-size:1.3rem;font-weight:800;color:var(--white);line-height:1;margin-bottom:4px;}
+    .topup-label{font-size:0.72rem;color:var(--muted);margin-bottom:10px;}
+    .topup-price{font-size:1rem;font-weight:700;color:var(--green);}
+    .btn-topup{background:var(--green);border:none;border-radius:9px;color:#0a0f0d;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.85rem;padding:10px 20px;cursor:pointer;transition:all 0.2s;display:inline-block;margin-top:16px;width:100%;}
+    .btn-topup:hover{background:var(--green-dark);}
+    .btn-topup:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+
+    /* INBOX BADGE */
+    .inbox-badge{background:var(--danger);color:#fff;font-size:0.65rem;font-weight:800;padding:2px 6px;border-radius:99px;margin-left:6px;display:none;}
+    .inbox-badge.show{display:inline-block;}
   </style>
 </head>
 <body>
+
+<!-- HIDDEN PAYFAST TOPUP FORM -->
+<form id="topupForm" action="https://payment.payfast.io/eng/process" method="POST" style="display:none;">
+  <input type="hidden" name="merchant_id"    value="11524778"/>
+  <input type="hidden" name="merchant_key"   value="6pnndozsbggfg"/>
+  <input type="hidden" name="return_url"     value="https://hermanvs27-afk.github.io/wablast/dashboard.html?topup=success"/>
+  <input type="hidden" name="cancel_url"     value="https://hermanvs27-afk.github.io/wablast/dashboard.html?topup=cancelled"/>
+  <input type="hidden" name="notify_url"     value="https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1/payfast-notify"/>
+  <input type="hidden" name="name_first"     id="tp_name"/>
+  <input type="hidden" name="email_address"  id="tp_email"/>
+  <input type="hidden" name="m_payment_id"   id="tp_payment_id"/>
+  <input type="hidden" name="amount"         id="tp_amount"/>
+  <input type="hidden" name="item_name"      id="tp_item_name"/>
+  <input type="hidden" name="item_description" id="tp_item_desc"/>
+</form>
 
 <!-- LOADING -->
 <div id="loadingScreen">
@@ -115,15 +145,46 @@
     <a href="billing.html" class="btn-upgrade">⬆ Upgrade plan</a>
   </div>
 
-  <!-- USAGE -->
+  <!-- USAGE + TOPUP -->
   <div class="usage-card">
-    <div class="card-title">📊 This month's usage</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div class="card-title" style="margin-bottom:0;">📊 This month's usage</div>
+      <button onclick="toggleTopup()" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--green);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">+ Top up messages</button>
+    </div>
     <div class="usage-row">
       <span class="usage-label">Messages sent</span>
       <span class="usage-nums"><span id="msgUsed">0</span> / <span id="msgLimit">100</span></span>
     </div>
     <div class="bar-bg">
       <div class="bar-fill" id="usageBar" style="width:0%"></div>
+    </div>
+
+    <!-- TOPUP PANEL -->
+    <div id="topupPanel" style="display:none;margin-top:20px;border-top:1px solid var(--border);padding-top:18px;">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Select a top-up package — credits are added instantly after payment:</div>
+      <div class="topup-grid">
+        <div class="topup-option" onclick="selectTopup(this,100,65)">
+          <div class="topup-msgs">100</div>
+          <div class="topup-label">messages</div>
+          <div class="topup-price">R65</div>
+        </div>
+        <div class="topup-option" onclick="selectTopup(this,200,130)">
+          <div class="topup-msgs">200</div>
+          <div class="topup-label">messages</div>
+          <div class="topup-price">R130</div>
+        </div>
+        <div class="topup-option" onclick="selectTopup(this,500,325)">
+          <div class="topup-msgs">500</div>
+          <div class="topup-label">messages</div>
+          <div class="topup-price">R325</div>
+        </div>
+        <div class="topup-option" onclick="selectTopup(this,1000,650)">
+          <div class="topup-msgs">1,000</div>
+          <div class="topup-label">messages</div>
+          <div class="topup-price">R650</div>
+        </div>
+      </div>
+      <button class="btn-topup" id="topupBtn" disabled onclick="processTopup()">Select a package above</button>
     </div>
   </div>
 
@@ -154,15 +215,15 @@
       <div class="action-title">Send Messages</div>
       <div class="action-sub">Import contacts and send your campaign</div>
     </a>
+    <a href="inbox.html" class="action-card">
+      <div class="action-icon">💬</div>
+      <div class="action-title">Inbox <span class="inbox-badge" id="inboxBadge">New</span></div>
+      <div class="action-sub">View and reply to incoming messages</div>
+    </a>
     <a href="billing.html" class="action-card">
       <div class="action-icon">⬆️</div>
       <div class="action-title">Upgrade Plan</div>
       <div class="action-sub">Get more messages per month</div>
-    </a>
-    <a href="landing.html#faq" class="action-card">
-      <div class="action-icon">❓</div>
-      <div class="action-title">FAQ</div>
-      <div class="action-sub">Common questions answered</div>
     </a>
     <a href="mailto:hermanvs27@gmail.com" class="action-card">
       <div class="action-icon">💬</div>
@@ -224,18 +285,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Handle PayFast return
-  // NOTE: We do NOT upgrade the plan here — that is done server-side by the
-  // payfast-notify Edge Function after PayFast signature verification.
-  // This URL is only used to show a "payment received" message to the user.
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment') === 'success') {
     localStorage.removeItem('wablast_pending_plan');
     window.history.replaceState({}, '', 'dashboard.html');
-    // Show a pending notice — plan activates once PayFast notifies the server
     const notice = document.createElement('div');
     notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--green);line-height:1.6;';
     notice.innerHTML = '✅ <strong>Payment received!</strong> Your plan is being activated — this usually takes less than a minute. Refresh the page shortly to see your updated plan.';
     document.querySelector('.page').prepend(notice);
+  }
+  if(params.get('topup') === 'success') {
+    window.history.replaceState({}, '', 'dashboard.html');
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--green);line-height:1.6;';
+    notice.innerHTML = '✅ <strong>Top-up received!</strong> Your credits are being added — refresh the page in a moment to see the updated balance.';
+    document.querySelector('.page').prepend(notice);
+  }
+  if(params.get('topup') === 'cancelled') {
+    window.history.replaceState({}, '', 'dashboard.html');
   }
 
   // Plan info
@@ -302,8 +369,55 @@ window.addEventListener('DOMContentLoaded', async () => {
       </table>`;
   }
 
+  // Check for unread inbox messages
+  const { data: unread } = await sb
+    .from('incoming_messages')
+    .select('id', { count: 'exact' })
+    .eq('phone_number_id', (await sb.from('assigned_numbers').select('phone_number_id').eq('user_id', user.id).eq('active', true).single()).data?.phone_number_id || '')
+    .eq('read', false);
+  if(unread && unread.length > 0) {
+    document.getElementById('inboxBadge').classList.add('show');
+  }
+
   document.getElementById('loadingScreen').style.display = 'none';
 });
+
+// ── Top-up ──
+let selectedTopupMsgs = 0;
+let selectedTopupPrice = 0;
+
+function toggleTopup() {
+  const panel = document.getElementById('topupPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectTopup(el, msgs, price) {
+  document.querySelectorAll('.topup-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTopupMsgs  = msgs;
+  selectedTopupPrice = price;
+  const btn = document.getElementById('topupBtn');
+  btn.disabled = false;
+  btn.textContent = `Pay R${price} for ${msgs.toLocaleString()} messages`;
+}
+
+async function processTopup() {
+  if(!selectedTopupMsgs) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return;
+  const user      = session.user;
+  const firstName = user.user_metadata?.full_name?.split(' ')[0] || user.email.split('@')[0];
+  const paymentId = `wablast_${user.id.substring(0,8)}_topup${selectedTopupMsgs}_${Date.now()}`;
+
+  document.getElementById('tp_name').value      = firstName;
+  document.getElementById('tp_email').value     = user.email;
+  document.getElementById('tp_payment_id').value = paymentId;
+  document.getElementById('tp_amount').value    = selectedTopupPrice.toFixed(2);
+  document.getElementById('tp_item_name').value = `WABlast Top-up ${selectedTopupMsgs} messages`;
+  document.getElementById('tp_item_desc').value = `${selectedTopupMsgs} message credits added to your account`;
+
+  document.getElementById('topupForm').submit();
+}
 
 async function logout() {
   await sb.auth.signOut();

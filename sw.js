@@ -1,4 +1,4 @@
-const CACHE = 'wa-blast-v4';
+const CACHE = 'wa-blast-v5';
 const ASSETS = [
   '/wablast/',
   '/wablast/index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   '/wablast/auth.html',
   '/wablast/billing.html',
   '/wablast/landing.html',
+  '/wablast/inbox.html',
   '/wablast/privacy.html',
   '/wablast/terms.html',
   '/wablast/manifest.json'

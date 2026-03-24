@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WABlast — Inbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{--bg:#050807;--surface:#0c1410;--surface2:#142018;--border:#182418;--green:#00e676;--green-dark:#00c853;--green-glow:rgba(37,211,102,0.12);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--warn:#ffb347;--radius:14px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* NAV */
+    nav{background:rgba(5,8,7,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nav-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .nav-logo-text{font-size:1.1rem;font-weight:800;color:var(--white);}
+    .nav-logo-text span{color:var(--green);}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+    .user-email{font-size:0.8rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .btn-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+    .btn-back:hover{border-color:var(--muted);color:var(--white);}
+
+    /* LAYOUT */
+    .page{max-width:1100px;margin:0 auto;padding:32px 24px;}
+    .page-header{margin-bottom:24px;}
+    .page-header h1{font-size:1.6rem;font-weight:800;color:var(--white);letter-spacing:-0.5px;margin-bottom:6px;}
+    .page-header p{font-size:0.88rem;color:var(--muted);}
+
+    /* INBOX LAYOUT */
+    .inbox-wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;height:calc(100vh - 200px);min-height:500px;}
+    .inbox-list{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow-y:auto;display:flex;flex-direction:column;}
+    .inbox-list-header{padding:16px 18px;border-bottom:1px solid var(--border);font-size:0.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between;}
+    .unread-count{background:var(--danger);color:#fff;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:99px;}
+
+    /* CONVERSATION LIST */
+    .conv-item{padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;}
+    .conv-item:hover{background:var(--surface2);}
+    .conv-item.active{background:var(--surface2);border-left:3px solid var(--green);}
+    .conv-item.unread .conv-name{color:var(--white);font-weight:700;}
+    .conv-item.unread .conv-preview{color:var(--text);}
+    .conv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+    .conv-name{font-size:0.88rem;font-weight:500;color:var(--text);}
+    .conv-time{font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .conv-preview{font-size:0.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .unread-dot{width:8px;height:8px;background:var(--green);border-radius:50%;flex-shrink:0;}
+
+    /* CHAT PANEL */
+    .chat-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;}
+    .chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+    .chat-avatar{width:38px;height:38px;background:var(--green-glow);border:1px solid rgba(37,211,102,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+    .chat-contact-name{font-size:0.95rem;font-weight:700;color:var(--white);}
+    .chat-contact-phone{font-size:0.76rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;}
+    .msg-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:0.86rem;line-height:1.5;}
+    .msg-bubble.incoming{background:var(--surface2);border:1px solid var(--border);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;}
+    .msg-bubble.outgoing{background:var(--green);color:#050807;align-self:flex-end;border-bottom-right-radius:4px;}
+    .msg-time{font-size:0.68rem;margin-top:4px;opacity:0.7;font-family:'DM Mono',monospace;}
+    .msg-type-badge{font-size:0.65rem;background:rgba(0,0,0,0.15);padding:2px 6px;border-radius:99px;margin-left:6px;}
+
+    /* REPLY BOX */
+    .reply-box{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;}
+    .reply-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;padding:10px 14px;outline:none;resize:none;min-height:42px;max-height:120px;transition:border-color 0.2s;line-height:1.5;}
+    .reply-input:focus{border-color:var(--green);}
+    .reply-input::placeholder{color:var(--muted);}
+    .btn-reply{background:var(--green);border:none;border-radius:10px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.85rem;padding:10px 20px;cursor:pointer;transition:all 0.2s;white-space:nowrap;height:42px;}
+    .btn-reply:hover{background:var(--green-dark);}
+    .btn-reply:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+    .reply-note{font-size:0.72rem;color:var(--muted);padding:0 20px 12px;line-height:1.5;}
+
+    /* EMPTY STATE */
+    .empty-inbox{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;}
+    .empty-inbox-icon{font-size:3rem;margin-bottom:14px;}
+    .empty-inbox-title{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:6px;}
+    .empty-inbox-sub{font-size:0.82rem;color:var(--muted);line-height:1.6;}
+    .no-conv-selected{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.88rem;}
+
+    /* LOADING */
+    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;}
+    .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #loadingScreen p{font-size:0.85rem;color:var(--muted);}
+
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:99px}
+
+    @media(max-width:768px){
+      .inbox-wrap{grid-template-columns:1fr;height:auto;}
+      .inbox-list{height:300px;}
+      .chat-panel{min-height:400px;}
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Loading inbox…</p>
+</div>
+
+<nav>
+  <a href="dashboard.html" class="nav-logo">
+    <div class="nav-logo-icon">💬</div>
+    <div class="nav-logo-text">WA<span>Blast</span></div>
+  </a>
+  <div class="nav-right">
+    <span class="user-email" id="userEmail"></span>
+    <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <h1>💬 Inbox</h1>
+    <p>Replies from your recipients. You can respond within 24 hours of their last message.</p>
+  </div>
+
+  <div class="inbox-wrap">
+    <!-- CONVERSATION LIST -->
+    <div class="inbox-list">
+      <div class="inbox-list-header">
+        Conversations
+        <span class="unread-count" id="unreadCount" style="display:none;"></span>
+      </div>
+      <div id="convList">
+        <div class="empty-inbox">
+          <div class="empty-inbox-icon">📭</div>
+          <div class="empty-inbox-title">No messages yet</div>
+          <div class="empty-inbox-sub">When recipients reply to your campaigns, their messages will appear here.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT PANEL -->
+    <div class="chat-panel" id="chatPanel">
+      <div class="no-conv-selected">← Select a conversation to view messages</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const EDGE_BASE = 'https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1';
+
+let currentUserId    = null;
+let myPhoneNumberId  = null;
+let activePhone      = null;
+let allMessages      = [];
+let conversations    = [];
+let realtimeSub      = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) { window.location.href = 'auth.html'; return; }
+
+  currentUserId = session.user.id;
+  document.getElementById('userEmail').textContent = session.user.email;
+
+  // Check suspension
+  const { data: profile } = await sb
+    .from('profiles').select('suspended').eq('user_id', currentUserId).single();
+  if(profile?.suspended) { window.location.href = 'dashboard.html'; return; }
+
+  // Get assigned phone number
+  const { data: assigned } = await sb
+    .from('assigned_numbers')
+    .select('phone_number_id')
+    .eq('user_id', currentUserId)
+    .eq('active', true)
+    .single();
+
+  if(!assigned) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    return;
+  }
+
+  myPhoneNumberId = assigned.phone_number_id;
+
+  await loadMessages();
+  subscribeRealtime();
+  document.getElementById('loadingScreen').style.display = 'none';
+});
+
+async function loadMessages() {
+  const { data, error } = await sb
+    .from('incoming_messages')
+    .select('*')
+    .eq('phone_number_id', myPhoneNumberId)
+    .order('received_at', { ascending: false });
+
+  if(error) { console.error('Load messages error:', error); return; }
+  allMessages = data || [];
+  buildConversations();
+  renderConvList();
+
+  // Mark all as read
+  await sb
+    .from('incoming_messages')
+    .update({ read: true })
+    .eq('phone_number_id', myPhoneNumberId)
+    .eq('read', false);
+}
+
+function buildConversations() {
+  // Group messages by sender phone — latest message first
+  const convMap = {};
+  allMessages.forEach(msg => {
+    if(!convMap[msg.from_phone]) {
+      convMap[msg.from_phone] = { phone: msg.from_phone, messages: [], unread: 0 };
+    }
+    convMap[msg.from_phone].messages.push(msg);
+    if(!msg.read) convMap[msg.from_phone].unread++;
+  });
+  conversations = Object.values(convMap).sort((a, b) => {
+    const aLast = a.messages[0]?.received_at || '';
+    const bLast = b.messages[0]?.received_at || '';
+    return bLast.localeCompare(aLast);
+  });
+}
+
+function renderConvList() {
+  const list    = document.getElementById('convList');
+  const totalUnread = conversations.reduce((s, c) => s + c.unread, 0);
+
+  if(totalUnread > 0) {
+    const badge = document.getElementById('unreadCount');
+    badge.textContent = totalUnread;
+    badge.style.display = 'inline-block';
+  }
+
+  if(!conversations.length) {
+    list.innerHTML = `
+      <div class="empty-inbox">
+        <div class="empty-inbox-icon">📭</div>
+        <div class="empty-inbox-title">No messages yet</div>
+        <div class="empty-inbox-sub">When recipients reply to your campaigns, their messages will appear here.</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = conversations.map(conv => {
+    const last    = conv.messages[0];
+    const time    = formatTime(last.received_at);
+    const preview = last.message_body || `[${last.message_type}]`;
+    const isActive = conv.phone === activePhone;
+    return `
+      <div class="conv-item ${conv.unread > 0 ? 'unread' : ''} ${isActive ? 'active' : ''}"
+           onclick="openConversation('${conv.phone}')">
+        <div class="conv-top">
+          <span class="conv-name">${conv.phone}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${conv.unread > 0 ? '<div class="unread-dot"></div>' : ''}
+            <span class="conv-time">${time}</span>
+          </div>
+        </div>
+        <div class="conv-preview">${escapeHtml(preview)}</div>
+      </div>`;
+  }).join('');
+}
+
+function openConversation(phone) {
+  activePhone = phone;
+  renderConvList();
+  renderChat(phone);
+}
+
+function renderChat(phone) {
+  const conv = conversations.find(c => c.phone === phone);
+  if(!conv) return;
+
+  const msgs = [...conv.messages].reverse(); // oldest first
+  const panel = document.getElementById('chatPanel');
+
+  panel.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-avatar">💬</div>
+      <div>
+        <div class="chat-contact-name">${phone}</div>
+        <div class="chat-contact-phone">Replied to your campaign</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      ${msgs.map(m => `
+        <div>
+          <div class="msg-bubble incoming">
+            ${escapeHtml(m.message_body || `[${m.message_type} message]`)}
+            <div class="msg-time">${formatTime(m.received_at)}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="reply-note">⏱ You can reply free-form within 24 hours of the recipient's last message.</div>
+    <div class="reply-box">
+      <textarea class="reply-input" id="replyInput" placeholder="Type your reply..." rows="1"
+        oninput="autoResize(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply();}"></textarea>
+      <button class="btn-reply" id="replyBtn" onclick="sendReply()">Send</button>
+    </div>`;
+
+  // Scroll to bottom
+  const chatMsgs = document.getElementById('chatMessages');
+  chatMsgs.scrollTop = chatMsgs.scrollHeight;
+}
+
+async function sendReply() {
+  const input = document.getElementById('replyInput');
+  const text  = input.value.trim();
+  if(!text) return;
+
+  const btn = document.getElementById('replyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/send-message`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        to:      activePhone,
+        type:    'text',
+        message: text
+      })
+    });
+
+    const data = await res.json();
+    if(res.ok && data.success) {
+      // Show outgoing bubble immediately
+      const chatMsgs = document.getElementById('chatMessages');
+      const bubble = document.createElement('div');
+      bubble.innerHTML = `
+        <div class="msg-bubble outgoing">
+          ${escapeHtml(text)}
+          <div class="msg-time">Just now</div>
+        </div>`;
+      chatMsgs.appendChild(bubble);
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+      input.value = '';
+      input.style.height = 'auto';
+    } else {
+      alert(`Failed to send: ${data.error?.message || 'Unknown error'}`);
+    }
+  } catch(err) {
+    alert('Error sending reply: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Send';
+}
+
+function subscribeRealtime() {
+  realtimeSub = sb
+    .channel('inbox-messages')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'incoming_messages',
+      filter: `phone_number_id=eq.${myPhoneNumberId}`
+    }, payload => {
+      allMessages.unshift(payload.new);
+      buildConversations();
+      renderConvList();
+      if(activePhone === payload.new.from_phone) renderChat(activePhone);
+    })
+    .subscribe();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function formatTime(iso) {
+  if(!iso) return '';
+  const d   = new Date(iso);
+  const now = new Date();
+  const diff = now - d;
+  if(diff < 60000)   return 'Just now';
+  if(diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if(diff < 86400000) return d.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('en-ZA', {day:'numeric',month:'short'});
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
