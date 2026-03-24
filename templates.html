@@ -577,7 +577,7 @@ async function submitTemplate(){
 
 // ── DELETE ──
 async function deleteTemplate(name){
-  if(!confirm(`Delete template "${name}"? This cannot be undone.`)) return;
+  if(!confirm(`⚠️ Delete template "${name}"?\n\n🚫 Important: Once deleted, this template name cannot be used again for 30 days (Meta policy).\n\nAre you sure you want to delete it?`)) return;
   try{
     const { data:{ session } } = await sb.auth.getSession();
     const res=await fetch(`${EDGE}/manage-template`,{
@@ -585,9 +585,12 @@ async function deleteTemplate(name){
       headers:{'Authorization':`Bearer ${session.access_token}`,'Content-Type':'application/json'},
       body:JSON.stringify({template_name:name,waba_id:myWabaId})
     });
-    if(res.ok){ await loadTemplates(); toast('Template deleted.'); }
-    else{ const d=await res.json(); alert('Failed: '+(d.error?.message||'Unknown error')); }
-  } catch(e){ alert('Error: '+e.message); }
+    const text = await res.text();
+    let d={};
+    try{ d=JSON.parse(text); }catch(e){}
+    if(res.ok&&(d.success||text.includes('true'))){ await loadTemplates(); toast('Template deleted. Note: this name cannot be reused for 30 days.'); }
+    else{ alert('Failed to delete: '+(d.error?.message||d.message||text||'Unknown error')); }
+  } catch(e){ alert('Network error deleting template: '+e.message+'\n\nPlease check your connection and try again.'); }
 }
 
 function toast(msg){
