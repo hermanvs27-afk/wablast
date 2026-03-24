@@ -292,11 +292,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Handle PayFast return
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment') === 'success') {
+    // Clear all stored plan data
     localStorage.removeItem('wablast_pending_plan');
+    localStorage.removeItem('wablast_selected_plan');
+    localStorage.removeItem('wablast_selected_plan_name');
+    localStorage.removeItem('wablast_selected_plan_price');
     window.history.replaceState({}, '', 'dashboard.html');
+
+    // Show onboarding banner for new users
     const notice = document.createElement('div');
-    notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--green);line-height:1.6;';
-    notice.innerHTML = '✅ <strong>Payment received!</strong> Your plan is being activated — this usually takes less than a minute. Refresh the page shortly to see your updated plan.';
+    notice.id = 'onboardingBanner';
+    notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.35);border-radius:14px;padding:20px 22px;margin-bottom:24px;line-height:1.7;';
+    notice.innerHTML = `
+      <div style="font-size:1rem;font-weight:800;color:var(--green);margin-bottom:6px;">🎉 Welcome to WABlast! Your account is active.</div>
+      <div style="font-size:0.86rem;color:var(--text);margin-bottom:14px;">Your WhatsApp number is being assigned automatically. Your next step is to create your first message template — Meta requires approved templates before you can send bulk messages.</div>
+      <a href="templates.html" style="background:var(--green);color:#0a0f0d;padding:11px 22px;border-radius:9px;text-decoration:none;font-weight:800;font-size:0.88rem;display:inline-block;">📋 Create your first template →</a>
+    `;
     document.querySelector('.page').prepend(notice);
   }
   if(params.get('topup') === 'success') {

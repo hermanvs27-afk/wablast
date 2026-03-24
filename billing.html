@@ -131,16 +131,31 @@ let currentPlan  = 'none';
 
 window.addEventListener('DOMContentLoaded', async () => {
   const { data:{ session } } = await sb.auth.getSession();
-  if(!session){ window.location.href='auth.html'; return; }
-  currentUser = session.user;
-  currentPlan  = currentUser.user_metadata?.plan || 'none';
-  document.getElementById('userEmail').textContent = currentUser.email;
-  renderPlans();
-  document.getElementById('loadingScreen').style.display='none';
 
-  // Show cancelled message
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment')==='cancelled') alert('Payment was cancelled. Your plan was not changed.');
+
+  if(session) {
+    currentUser = session.user;
+    currentPlan = currentUser.user_metadata?.plan || 'none';
+    document.getElementById('userEmail').textContent = currentUser.email;
+
+    // Auto-resume: user just signed up/in with a plan pre-selected
+    if(params.get('resume') === '1') {
+      const planId    = localStorage.getItem('wablast_selected_plan');
+      const planName  = localStorage.getItem('wablast_selected_plan_name');
+      const planPrice = parseFloat(localStorage.getItem('wablast_selected_plan_price') || '0');
+      if(planId && planName && planPrice) {
+        // Show spinner while we auto-submit
+        document.getElementById('loadingScreen').querySelector('p').textContent = 'Redirecting to payment…';
+        setTimeout(() => submitToPayFast(planId, planName, planPrice), 800);
+        return;
+      }
+    }
+  }
+
+  renderPlans();
+  document.getElementById('loadingScreen').style.display='none';
 });
 
 function renderPlans() {
@@ -167,32 +182,36 @@ function renderPlans() {
 }
 
 function selectPlan(planId, planName, price) {
-  if(!currentUser) return;
+  // Store plan selection in localStorage
+  localStorage.setItem('wablast_selected_plan', planId);
+  localStorage.setItem('wablast_selected_plan_name', planName);
+  localStorage.setItem('wablast_selected_plan_price', price);
 
-  // Generate a unique payment ID
+  if(!currentUser) {
+    // Not logged in — go to signup with plan param
+    window.location.href = `auth.html?plan=${planId}&mode=signup`;
+    return;
+  }
+
+  // Logged in — go straight to PayFast
+  submitToPayFast(planId, planName, price);
+}
+
+function submitToPayFast(planId, planName, price) {
   const paymentId = `wablast_${currentUser.id.substring(0,8)}_${planId}_${Date.now()}`;
-
-  // Get billing date (today)
   const today = new Date();
   const billingDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-  // Get first name from email
   const firstName = currentUser.user_metadata?.full_name?.split(' ')[0] || currentUser.email.split('@')[0];
 
-  // Fill PayFast form
   document.getElementById('pf_name_first').value  = firstName;
   document.getElementById('pf_email').value        = currentUser.email;
   document.getElementById('pf_payment_id').value   = paymentId;
   document.getElementById('pf_amount').value        = price.toFixed(2);
   document.getElementById('pf_item_name').value     = `WABlast ${planName} Plan`;
-  document.getElementById('pf_item_desc').value     = `WABlast ${planName} — ${PLANS.find(p=>p.id===planId).msgs.toLocaleString()} messages/month`;
+  document.getElementById('pf_item_desc').value     = `WABlast ${planName} — ${PLANS.find(p=>p.id===planId)?.msgs.toLocaleString()} messages/month`;
   document.getElementById('pf_billing_date').value  = billingDate;
   document.getElementById('pf_recurring').value     = price.toFixed(2);
 
-  // Store selected plan so dashboard can update after return
-  localStorage.setItem('wablast_pending_plan', planId);
-
-  // Submit to PayFast
   document.getElementById('payfastForm').submit();
 }
 </script>

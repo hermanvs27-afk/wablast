@@ -332,7 +332,13 @@ async function signIn() {
   try {
     const {data, error} = await sb.auth.signInWithPassword({email, password});
     if(error) throw error;
-    window.location.href = 'dashboard.html';
+    // Resume billing if plan was selected before login
+    const pendingPlan = localStorage.getItem('wablast_selected_plan');
+    if(pendingPlan) {
+      window.location.href = 'billing.html?resume=1';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
   } catch(err) {
     showAlert(friendlyError(err.message));
     setLoading('signinBtn','signinSpinner','signinLabel',false);
@@ -356,14 +362,28 @@ async function signUp() {
 
   try {
     const params = new URLSearchParams(window.location.search);
-    const plan   = params.get('plan') || 'starter';
+    const plan   = params.get('plan') || localStorage.getItem('wablast_selected_plan') || 'starter';
     const {data, error} = await sb.auth.signUp({
       email, password,
       options: { data: { full_name: name, plan } }
     });
     if(error) throw error;
-    showAlert('Account created! Check your email to confirm your address.', 'success');
-    setLoading('signupBtn','signupSpinner','signupLabel',false);
+
+    // Auto sign in after signup (Supabase returns session if email confirm disabled)
+    if(data.session) {
+      // Has session — go straight to billing to complete payment
+      const planName  = localStorage.getItem('wablast_selected_plan_name');
+      const planPrice = localStorage.getItem('wablast_selected_plan_price');
+      if(plan && planName && planPrice) {
+        window.location.href = `billing.html?resume=1`;
+      } else {
+        window.location.href = 'billing.html';
+      }
+    } else {
+      // Email confirmation required
+      showAlert('Account created! Check your email to confirm your address, then sign in to complete your purchase.', 'success');
+      setLoading('signupBtn','signupSpinner','signupLabel',false);
+    }
   } catch(err) {
     showAlert(friendlyError(err.message));
     setLoading('signupBtn','signupSpinner','signupLabel',false);
