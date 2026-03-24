@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WABlast — Templates</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{--bg:#050807;--surface:#0c1410;--surface2:#142018;--border:#182418;--green:#00e676;--green-dark:#00c853;--green-glow:rgba(37,211,102,0.12);--text:#e8f0eb;--muted:#6b8f76;--white:#f0f7f2;--danger:#ff6b6b;--warn:#ffb347;--radius:14px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    nav{background:rgba(5,8,7,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nav-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .nav-logo-text{font-size:1.1rem;font-weight:800;color:var(--white);}
+    .nav-logo-text span{color:var(--green);}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+    .user-email{font-size:0.8rem;color:var(--muted);font-family:'DM Mono',monospace;}
+    .btn-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.8rem;padding:7px 14px;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+    .btn-back:hover{border-color:var(--muted);color:var(--white);}
+    .page{max-width:1000px;margin:0 auto;padding:32px 24px;}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+    .page-header h1{font-size:1.6rem;font-weight:800;color:var(--white);letter-spacing:-0.5px;}
+    .page-header p{font-size:0.85rem;color:var(--muted);margin-top:4px;}
+    .btn-primary{background:var(--green);border:none;border-radius:10px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.88rem;padding:11px 22px;cursor:pointer;transition:all 0.2s;}
+    .btn-primary:hover{background:var(--green-dark);}
+
+    /* TEMPLATE LIST */
+    .templates-grid{display:grid;gap:14px;margin-bottom:32px;}
+    .template-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+    .template-card:hover{border-color:rgba(37,211,102,0.2);}
+    .template-info{flex:1;min-width:200px;}
+    .template-name{font-size:0.95rem;font-weight:700;color:var(--white);margin-bottom:4px;font-family:'DM Mono',monospace;}
+    .template-category{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+    .template-body{font-size:0.82rem;color:var(--text);line-height:1.5;max-width:500px;white-space:pre-wrap;}
+    .status-badge{padding:5px 12px;border-radius:99px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .status-badge.approved{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:var(--green);}
+    .status-badge.pending{background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.3);color:var(--warn);}
+    .status-badge.rejected{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);color:var(--danger);}
+    .status-badge.paused{background:rgba(107,143,118,0.1);border:1px solid rgba(107,143,118,0.3);color:var(--muted);}
+    .btn-delete{background:none;border:1px solid var(--border);border-radius:8px;color:var(--danger);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;padding:6px 14px;cursor:pointer;transition:all 0.2s;}
+    .btn-delete:hover{border-color:var(--danger);background:rgba(255,107,107,0.08);}
+    .empty-state{text-align:center;padding:60px 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;}
+    .empty-icon{font-size:2.5rem;margin-bottom:14px;}
+    .empty-title{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:6px;}
+    .empty-sub{font-size:0.82rem;color:var(--muted);line-height:1.6;max-width:360px;margin:0 auto;}
+
+    /* INFO BOX */
+    .info-box{background:var(--green-glow);border:1px solid rgba(0,230,118,0.2);border-radius:12px;padding:14px 18px;font-size:0.82rem;color:var(--text);line-height:1.7;margin-bottom:24px;}
+    .info-box strong{color:var(--green);}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.2s;}
+    .modal-overlay.open .modal{transform:translateY(0);}
+    .modal h3{font-size:1.2rem;font-weight:800;color:var(--white);margin-bottom:6px;}
+    .modal p{font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+    .field{margin-bottom:16px;}
+    .field label{display:block;font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+    .field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;padding:10px 14px;outline:none;transition:border-color 0.2s;}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+    .field select option{background:var(--surface2);}
+    .field textarea{min-height:100px;resize:vertical;line-height:1.5;}
+    .field .hint{font-size:0.74rem;color:var(--muted);margin-top:6px;line-height:1.5;}
+    .char-count{font-size:0.72rem;color:var(--muted);text-align:right;margin-top:4px;font-family:'DM Mono',monospace;}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+    .btn-cancel{background:none;border:1px solid var(--border);border-radius:9px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.85rem;padding:10px 20px;cursor:pointer;}
+    .btn-cancel:hover{border-color:var(--muted);}
+    .btn-submit{background:var(--green);border:none;border-radius:9px;color:#050807;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:0.85rem;padding:10px 22px;cursor:pointer;}
+    .btn-submit:hover{background:var(--green-dark);}
+    .btn-submit:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+
+    /* PREVIEW */
+    .preview-box{background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;margin-top:12px;}
+    .preview-label{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+    .preview-bubble{background:#005c4b;border-radius:10px;border-bottom-left-radius:2px;padding:10px 14px;font-size:0.84rem;color:#e9edef;line-height:1.5;max-width:280px;white-space:pre-wrap;}
+    .preview-footer{font-size:0.72rem;color:#8696a0;margin-top:6px;}
+
+    /* BUTTONS SECTION */
+    .btn-fields{border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:8px;}
+    .btn-field-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
+    .btn-add-btn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.78rem;padding:8px;cursor:pointer;width:100%;margin-top:4px;transition:all 0.2s;}
+    .btn-add-btn:hover{border-color:var(--green);color:var(--green);}
+    .btn-remove{background:none;border:1px solid var(--border);border-radius:6px;color:var(--danger);font-size:0.75rem;padding:6px 10px;cursor:pointer;height:38px;}
+
+    /* LOADING */
+    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;}
+    .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #loadingScreen p{font-size:0.85rem;color:var(--muted);}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:99px}
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Loading templates…</p>
+</div>
+
+<nav>
+  <a href="dashboard.html" class="nav-logo">
+    <div class="nav-logo-icon">💬</div>
+    <div class="nav-logo-text">WA<span>Blast</span></div>
+  </a>
+  <div class="nav-right">
+    <span class="user-email" id="userEmail"></span>
+    <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>📋 Message Templates</h1>
+      <p>Create and manage your Meta-approved WhatsApp message templates.</p>
+    </div>
+    <button class="btn-primary" onclick="openCreateModal()">+ Create template</button>
+  </div>
+
+  <div class="info-box">
+    <strong>How templates work:</strong> Meta requires all bulk WhatsApp messages to use approved templates. Submit your template below — Meta usually approves within a few minutes to 24 hours. Once approved, you can select it when sending a campaign. Use <strong>{{1}}</strong>, <strong>{{2}}</strong> etc. for personalised variables like names and property addresses.
+  </div>
+
+  <div id="templatesList">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No templates yet</div>
+      <div class="empty-sub">Create your first template and submit it for Meta approval. Approved templates can be used immediately in your campaigns.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE TEMPLATE MODAL -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <h3>Create message template</h3>
+    <p>Fill in the details below. Your template will be submitted to Meta for approval. Names must be lowercase with underscores only.</p>
+
+    <div class="field">
+      <label>Template name</label>
+      <input type="text" id="tplName" placeholder="e.g. new_listing_alert" oninput="sanitizeName(this); updatePreview()"/>
+      <div class="hint">Lowercase letters, numbers and underscores only. No spaces.</div>
+    </div>
+
+    <div class="field">
+      <label>Category</label>
+      <select id="tplCategory" onchange="updatePreview()">
+        <option value="MARKETING">Marketing — promotions, offers, announcements</option>
+        <option value="UTILITY">Utility — order updates, account alerts, reminders</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Language</label>
+      <select id="tplLanguage">
+        <option value="en_US">English</option>
+        <option value="af">Afrikaans</option>
+        <option value="zu">Zulu</option>
+        <option value="xh">Xhosa</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Message body</label>
+      <textarea id="tplBody" placeholder="Hi {{1}}, we have a new listing at {{2}}. Price: {{3}}. Reply STOP to opt out." oninput="updatePreview(); updateCharCount()"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / 1024</div>
+      <div class="hint">Use {{1}}, {{2}}, {{3}} etc. for variables. These will be replaced with actual values when sending. Always include opt-out instructions for marketing templates.</div>
+    </div>
+
+    <!-- LIVE PREVIEW -->
+    <div class="preview-box">
+      <div class="preview-label">Preview</div>
+      <div class="preview-bubble" id="previewBubble">Your message will appear here…</div>
+      <div class="preview-footer">Sent via WABlast · WhatsApp Business</div>
+    </div>
+
+    <!-- BUTTONS (optional) -->
+    <div class="field" style="margin-top:16px;">
+      <label>Buttons (optional)</label>
+      <div class="btn-fields">
+        <div id="btnFields"></div>
+        <button class="btn-add-btn" onclick="addButton()" id="addBtnBtn">+ Add button (max 2)</button>
+      </div>
+      <div class="hint">Add up to 2 call-to-action buttons. Types: Visit Website (URL) or Quick Reply.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitTemplate()">Submit for approval</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bddfjeifykuhzidwzbbg.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_t5QTMKoA4cAlDdSJHmYYsQ_yztnaaoF';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const EDGE_BASE = 'https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1';
+
+let currentUser     = null;
+let myPhoneNumberId = null;
+let myWabaId        = null;
+let buttonCount     = 0;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) { window.location.href = 'auth.html'; return; }
+  currentUser = session.user;
+  document.getElementById('userEmail').textContent = session.user.email;
+
+  // Get assigned number + waba_id
+  const { data: assigned } = await sb
+    .from('assigned_numbers')
+    .select('phone_number_id, waba_id, display_number')
+    .eq('user_id', currentUser.id)
+    .eq('active', true)
+    .single();
+
+  if(!assigned?.waba_id) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('templatesList').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">No number assigned</div>
+        <div class="empty-sub">You need a WhatsApp number assigned to your account before you can create templates. Please contact support.</div>
+      </div>`;
+    return;
+  }
+
+  myPhoneNumberId = assigned.phone_number_id;
+  myWabaId        = assigned.waba_id;
+
+  await loadTemplates();
+  document.getElementById('loadingScreen').style.display = 'none';
+});
+
+async function loadTemplates() {
+  const { data:{ session } } = await sb.auth.getSession();
+  try {
+    const res = await fetch(`${EDGE_BASE}/manage-template?waba_id=${myWabaId}`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    const data = await res.json();
+
+    if(!res.ok || !data.data) {
+      document.getElementById('templatesList').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No templates yet</div>
+          <div class="empty-sub">Create your first template and submit it for Meta approval.</div>
+        </div>`;
+      return;
+    }
+
+    const templates = data.data.filter(t => t.name !== 'hello_world');
+    if(!templates.length) {
+      document.getElementById('templatesList').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No templates yet</div>
+          <div class="empty-sub">Create your first template and submit it for Meta approval.</div>
+        </div>`;
+      return;
+    }
+
+    renderTemplates(templates);
+  } catch(err) {
+    console.error('Load templates error:', err);
+  }
+}
+
+function renderTemplates(templates) {
+  const list = document.getElementById('templatesList');
+  list.innerHTML = `<div class="templates-grid">${templates.map(t => {
+    const bodyComp = t.components?.find(c => c.type === 'BODY');
+    const body     = bodyComp?.text || '(no body)';
+    const status   = (t.status || 'PENDING').toLowerCase();
+    return `
+      <div class="template-card">
+        <div class="template-info">
+          <div class="template-name">${t.name}</div>
+          <div class="template-category">${t.category} · ${t.language}</div>
+          <div class="template-body">${escapeHtml(body)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+          <span class="status-badge ${status}">${t.status}</span>
+          <button class="btn-delete" onclick="deleteTemplate('${t.id}','${t.name}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+// ── CREATE MODAL ──
+function openCreateModal() {
+  buttonCount = 0;
+  document.getElementById('tplName').value    = '';
+  document.getElementById('tplBody').value    = '';
+  document.getElementById('btnFields').innerHTML = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('addBtnBtn').style.display = 'block';
+  updatePreview();
+  document.getElementById('createModal').classList.add('open');
+}
+
+function closeCreateModal() {
+  document.getElementById('createModal').classList.remove('open');
+}
+
+function sanitizeName(el) {
+  el.value = el.value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/__+/g, '_');
+}
+
+function updateCharCount() {
+  const len = document.getElementById('tplBody').value.length;
+  document.getElementById('charCount').textContent = len;
+}
+
+function updatePreview() {
+  const body = document.getElementById('tplBody').value || 'Your message will appear here…';
+  // Replace {{N}} with sample values for preview
+  const preview = body
+    .replace(/\{\{1\}\}/g, '[Name]')
+    .replace(/\{\{2\}\}/g, '[Value 2]')
+    .replace(/\{\{3\}\}/g, '[Value 3]')
+    .replace(/\{\{4\}\}/g, '[Value 4]')
+    .replace(/\{\{5\}\}/g, '[Value 5]');
+  document.getElementById('previewBubble').textContent = preview;
+}
+
+// ── BUTTONS ──
+function addButton() {
+  if(buttonCount >= 2) return;
+  buttonCount++;
+  const idx = buttonCount;
+  const row = document.createElement('div');
+  row.className = 'btn-field-row';
+  row.id = `btnRow${idx}`;
+  row.innerHTML = `
+    <div class="field" style="margin:0;">
+      <label>Type</label>
+      <select id="btnType${idx}" onchange="toggleBtnUrl(${idx})">
+        <option value="QUICK_REPLY">Quick Reply</option>
+        <option value="URL">Visit Website</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0;">
+      <label>Button text</label>
+      <input type="text" id="btnText${idx}" placeholder="e.g. View listing" maxlength="25"/>
+    </div>
+    <button class="btn-remove" onclick="removeButton(${idx})">✕</button>`;
+  document.getElementById('btnFields').appendChild(row);
+
+  // URL field (hidden by default)
+  const urlRow = document.createElement('div');
+  urlRow.id = `btnUrlRow${idx}`;
+  urlRow.style.display = 'none';
+  urlRow.style.marginBottom = '8px';
+  urlRow.innerHTML = `
+    <div class="field" style="margin:0;">
+      <label>Website URL</label>
+      <input type="text" id="btnUrl${idx}" placeholder="https://yoursite.co.za"/>
+    </div>`;
+  document.getElementById('btnFields').appendChild(urlRow);
+
+  if(buttonCount >= 2) document.getElementById('addBtnBtn').style.display = 'none';
+}
+
+function toggleBtnUrl(idx) {
+  const type   = document.getElementById(`btnType${idx}`).value;
+  const urlRow = document.getElementById(`btnUrlRow${idx}`);
+  if(urlRow) urlRow.style.display = type === 'URL' ? 'block' : 'none';
+}
+
+function removeButton(idx) {
+  document.getElementById(`btnRow${idx}`)?.remove();
+  document.getElementById(`btnUrlRow${idx}`)?.remove();
+  buttonCount--;
+  document.getElementById('addBtnBtn').style.display = 'block';
+}
+
+// ── SUBMIT TEMPLATE ──
+async function submitTemplate() {
+  const name     = document.getElementById('tplName').value.trim();
+  const category = document.getElementById('tplCategory').value;
+  const language = document.getElementById('tplLanguage').value;
+  const body     = document.getElementById('tplBody').value.trim();
+
+  if(!name)     { alert('Please enter a template name.'); return; }
+  if(!body)     { alert('Please enter the message body.'); return; }
+  if(body.length > 1024) { alert('Message body is too long (max 1024 characters).'); return; }
+
+  // Build components
+  const components = [{ type: 'BODY', text: body }];
+
+  // Collect buttons
+  const buttons = [];
+  for(let i = 1; i <= 2; i++) {
+    const typeEl = document.getElementById(`btnType${i}`);
+    const textEl = document.getElementById(`btnText${i}`);
+    if(!typeEl || !textEl) continue;
+    const btnText = textEl.value.trim();
+    if(!btnText) continue;
+    if(typeEl.value === 'URL') {
+      const urlEl = document.getElementById(`btnUrl${i}`);
+      buttons.push({ type: 'URL', text: btnText, url: urlEl?.value.trim() || '' });
+    } else {
+      buttons.push({ type: 'QUICK_REPLY', text: btnText });
+    }
+  }
+  if(buttons.length > 0) {
+    components.push({ type: 'BUTTONS', buttons });
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/manage-template`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, category, language, components, waba_id: myWabaId })
+    });
+
+    const data = await res.json();
+
+    if(res.ok && data.id) {
+      closeCreateModal();
+      await loadTemplates();
+      showToast('✅ Template submitted! Meta will review it shortly.');
+    } else {
+      const errMsg = data.error?.error_user_msg || data.error?.message || JSON.stringify(data);
+      alert(`Failed to submit template:\n\n${errMsg}`);
+    }
+  } catch(err) {
+    alert('Error submitting template: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit for approval';
+}
+
+// ── DELETE TEMPLATE ──
+async function deleteTemplate(templateId, templateName) {
+  if(!confirm(`Delete template "${templateName}"? This cannot be undone.`)) return;
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/manage-template`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ template_id: templateId, template_name: templateName, waba_id: myWabaId })
+    });
+    if(res.ok) {
+      await loadTemplates();
+      showToast('Template deleted.');
+    } else {
+      const data = await res.json();
+      alert('Failed to delete: ' + (data.error?.message || 'Unknown error'));
+    }
+  } catch(err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  if(!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:0.84rem;box-shadow:0 8px 28px rgba(0,0,0,0.4);z-index:999;transition:all 0.3s ease;opacity:0;transform:translateY(56px);';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(56px)'; }, 3500);
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
