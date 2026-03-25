@@ -136,13 +136,31 @@
   </div>
 
   <!-- PLAN -->
+  <!-- PAYMENT FAILED BANNER -->
+  <div id="paymentFailedBanner" style="display:none;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.35);border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+    <div style="font-size:1rem;font-weight:800;color:var(--danger);margin-bottom:6px;">⚠️ Payment failed — action required</div>
+    <div style="font-size:0.86rem;color:var(--text);margin-bottom:14px;">Your last payment failed. You have <strong id="hoursRemaining">48</strong> hours to update your payment before your account is suspended. Message sending has been paused.</div>
+    <a href="billing.html" style="background:var(--danger);color:#fff;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:800;font-size:0.85rem;display:inline-block;">Update payment →</a>
+  </div>
+
+  <!-- CANCELLED BANNER -->
+  <div id="cancelledBanner" style="display:none;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.3);border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+    <div style="font-size:1rem;font-weight:800;color:var(--warn);margin-bottom:6px;">📅 Subscription cancelled</div>
+    <div style="font-size:0.86rem;color:var(--text);margin-bottom:14px;">Your subscription has been cancelled. You have full access until <strong id="accessUntil">—</strong>. Changed your mind? Reactivate before then.</div>
+    <a href="billing.html" style="background:var(--green);color:#0a0f0d;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:800;font-size:0.85rem;display:inline-block;">Reactivate →</a>
+  </div>
+
   <div class="plan-card">
     <div class="plan-badge">Current Plan</div>
     <div class="plan-info">
       <div class="plan-name" id="planName">Starter — 100 messages/month</div>
       <div class="plan-msgs" id="planMsgs">Loading...</div>
+      <div id="billingCycleInfo" style="font-size:0.78rem;color:var(--muted);margin-top:4px;display:none;">Next billing: <span id="billingDate">—</span></div>
     </div>
-    <a href="billing.html" class="btn-upgrade">⬆ Upgrade plan</a>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+      <a href="billing.html" class="btn-upgrade">⬆ Upgrade plan</a>
+      <button id="cancelBtn" onclick="confirmCancel()" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Bricolage Grotesque',sans-serif;font-size:0.75rem;padding:5px 12px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.color='var(--danger)';this.style.borderColor='var(--danger)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Cancel subscription</button>
+    </div>
   </div>
 
   <!-- USAGE + TOPUP -->
@@ -270,36 +288,60 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userName').textContent  = name;
   document.getElementById('userEmail').textContent = user.email;
 
-  // Check if account is suspended
+  // Load full profile including account_status
   const { data: profile } = await sb
     .from('profiles')
-    .select('suspended')
+    .select('suspended, account_status, billing_cycle_ends, payment_failed_at, cancelled_at, plan')
     .eq('user_id', user.id)
     .single();
 
-  if(profile?.suspended === true) {
+  const status = profile?.account_status || 'active';
+
+  // ── SUSPENDED or DELETED → block access ──
+  if(profile?.suspended === true && (status === 'suspended' || status === 'deleted')) {
     document.getElementById('loadingScreen').style.display = 'none';
+    const isDeleted = status === 'deleted';
     document.querySelector('.page').innerHTML = `
       <div style="text-align:center;padding:80px 24px;">
-        <div style="font-size:3rem;margin-bottom:16px;">🚫</div>
-        <h2 style="font-size:1.5rem;font-weight:800;color:var(--danger);margin-bottom:10px;">Account Suspended</h2>
-        <p style="color:var(--muted);font-size:0.9rem;max-width:400px;margin:0 auto 24px;line-height:1.7;">Your WABlast account has been suspended. Please contact support to resolve this.</p>
-        <a href="mailto:hermanvs27@gmail.com" style="background:var(--green);color:#0a0f0d;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Contact Support</a>
+        <div style="font-size:3rem;margin-bottom:16px;">${isDeleted ? '🗑️' : '🚫'}</div>
+        <h2 style="font-size:1.5rem;font-weight:800;color:var(--danger);margin-bottom:10px;">${isDeleted ? 'Account Closed' : 'Account Suspended'}</h2>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:400px;margin:0 auto 24px;line-height:1.7;">
+          ${isDeleted
+            ? 'Your WABlast account has been closed. To start again, please sign up for a new plan.'
+            : 'Your account has been suspended due to a failed payment. Please contact support or update your payment to reactivate.'}
+        </p>
+        ${isDeleted
+          ? `<a href="billing.html" style="background:var(--green);color:#0a0f0d;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Sign up again →</a>`
+          : `<a href="mailto:hermanvs27@gmail.com" style="background:var(--green);color:#0a0f0d;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Contact Support</a>`}
       </div>`;
     return;
+  }
+
+  // ── PAYMENT FAILED → show banner, allow access ──
+  if(status === 'payment_failed' && profile?.payment_failed_at) {
+    const failedAt   = new Date(profile.payment_failed_at);
+    const deadline   = new Date(failedAt.getTime() + 48 * 60 * 60 * 1000);
+    const hoursLeft  = Math.max(0, Math.round((deadline - new Date()) / 3600000));
+    document.getElementById('paymentFailedBanner').style.display = 'block';
+    document.getElementById('hoursRemaining').textContent = hoursLeft;
+  }
+
+  // ── CANCELLED → show banner, allow access until billing cycle ends ──
+  if(status === 'cancelled' && profile?.billing_cycle_ends) {
+    document.getElementById('cancelledBanner').style.display = 'block';
+    document.getElementById('accessUntil').textContent =
+      new Date(profile.billing_cycle_ends).toLocaleDateString('en-ZA', {day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('cancelBtn').style.display = 'none'; // already cancelled
   }
 
   // Handle PayFast return
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment') === 'success') {
-    // Clear all stored plan data
     localStorage.removeItem('wablast_pending_plan');
     localStorage.removeItem('wablast_selected_plan');
     localStorage.removeItem('wablast_selected_plan_name');
     localStorage.removeItem('wablast_selected_plan_price');
     window.history.replaceState({}, '', 'dashboard.html');
-
-    // Show onboarding banner for new users
     const notice = document.createElement('div');
     notice.id = 'onboardingBanner';
     notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.35);border-radius:14px;padding:20px 22px;margin-bottom:24px;line-height:1.7;';
@@ -314,7 +356,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', 'dashboard.html');
     const notice = document.createElement('div');
     notice.style.cssText = 'background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--green);line-height:1.6;';
-    notice.innerHTML = '✅ <strong>Top-up received!</strong> Your credits are being added — refresh the page in a moment to see the updated balance.';
+    notice.innerHTML = '✅ <strong>Top-up received!</strong> Your credits are being added — refresh shortly.';
     document.querySelector('.page').prepend(notice);
   }
   if(params.get('topup') === 'cancelled') {
@@ -322,11 +364,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Plan info
-  const planKey = user.user_metadata?.plan || 'starter';
+  const planKey = profile?.plan || user.user_metadata?.plan || 'starter';
   const p = PLANS[planKey] || PLANS.starter;
   document.getElementById('planName').textContent = `${p.name} — ${p.msgs.toLocaleString()} messages/month`;
   document.getElementById('planMsgs').textContent = `${p.price}/month`;
   document.getElementById('msgLimit').textContent = p.msgs.toLocaleString();
+
+  // Billing cycle date
+  if(profile?.billing_cycle_ends) {
+    document.getElementById('billingCycleInfo').style.display = 'block';
+    document.getElementById('billingDate').textContent =
+      new Date(profile.billing_cycle_ends).toLocaleDateString('en-ZA', {day:'numeric',month:'long',year:'numeric'});
+  }
 
   // Load credits from Supabase
   const { data: credData } = await sb
@@ -433,6 +482,45 @@ async function processTopup() {
   document.getElementById('tp_item_desc').value = `${selectedTopupMsgs} message credits added to your account`;
 
   document.getElementById('topupForm').submit();
+}
+
+async function confirmCancel() {
+  const confirmed = confirm(
+    '⚠️ Cancel your WABlast subscription?\n\n' +
+    '• You will keep full access until your current billing cycle ends\n' +
+    '• You can reactivate anytime before then\n' +
+    '• After the billing cycle ends your account and data will be deleted\n\n' +
+    'Are you sure you want to cancel?'
+  );
+  if(!confirmed) return;
+
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return;
+
+  // Get billing cycle end date
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('billing_cycle_ends')
+    .eq('user_id', session.user.id)
+    .single();
+
+  const { error } = await sb.from('profiles').update({
+    account_status: 'cancelled',
+    cancelled_at:   new Date().toISOString()
+  }).eq('user_id', session.user.id);
+
+  if(error) {
+    alert('Error cancelling subscription. Please contact support.');
+    return;
+  }
+
+  // Show cancelled banner
+  document.getElementById('cancelledBanner').style.display = 'block';
+  if(profile?.billing_cycle_ends) {
+    document.getElementById('accessUntil').textContent =
+      new Date(profile.billing_cycle_ends).toLocaleDateString('en-ZA', {day:'numeric',month:'long',year:'numeric'});
+  }
+  document.getElementById('cancelBtn').style.display = 'none';
 }
 
 async function logout() {

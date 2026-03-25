@@ -364,7 +364,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadUsers() {
   const { data: profiles, error } = await sb
     .from('profiles')
-    .select('*')
+    .select('user_id, email, full_name, plan, suspended, is_admin, created_at, account_status, suspended_at, billing_cycle_ends, payment_failed_at, cancelled_at')
     .order('created_at', { ascending: false });
 
   // Also load credits for all users
@@ -390,6 +390,9 @@ async function loadUsers() {
       email:            p.email   || '',
       created_at:       p.created_at,
       is_admin:         p.is_admin || false,
+      account_status:   p.account_status || 'active',
+      suspended_at:     p.suspended_at,
+      billing_cycle_ends: p.billing_cycle_ends,
       credits_remaining: creditsMap[p.user_id || p.id] ?? 0,
       user_metadata: {
         full_name: p.full_name || p.name || '',
@@ -464,12 +467,14 @@ function renderUsers(users) {
         <td>
           <span class="status-dot ${suspended?'inactive':'active'}"></span>
           <span style="font-size:0.8rem;color:var(--muted);">${suspended?'Suspended':'Active'}</span>
+          ${u.account_status && u.account_status !== 'active' ? `<span style="font-size:0.68rem;background:rgba(255,179,71,0.12);border:1px solid rgba(255,179,71,0.3);color:var(--warn);border-radius:99px;padding:2px 7px;margin-left:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">${u.account_status}</span>` : ''}
         </td>
         <td>
           <div class="actions-cell">
             ${!isAdmin?`<button class="btn-action" onclick="openAssignModal('${u.id}','${name}')">Assign number</button>`:''}
             ${!isAdmin?`<button class="btn-action" onclick="openEditModal('${u.id}','${name}','${plan}')">Change plan</button>`:''}
-            ${!isAdmin?`<button class="btn-action danger" onclick="openSuspendModal('${u.id}','${name}')">Suspend</button>`:''}
+            ${!isAdmin && !u.user_metadata?.suspended ?`<button class="btn-action danger" onclick="openSuspendModal('${u.id}','${name}')">Suspend</button>`:''}
+            ${!isAdmin && u.user_metadata?.suspended ?`<button class="btn-action" onclick="unsuspendUser('${u.id}','${name}')">Unsuspend</button>`:''}
             ${isAdmin?'<span style="font-size:0.75rem;color:var(--muted);">Admin</span>':''}
           </div>
         </td>
@@ -522,14 +527,77 @@ async function confirmSuspend() {
   if(!suspendingUserId) return;
   const { error } = await sb
     .from('profiles')
-    .update({ suspended: true })
+    .update({
+      suspended:      true,
+      account_status: 'suspended',
+      suspended_at:   new Date().toISOString()
+    })
     .eq('user_id', suspendingUserId);
   if(error) { alert('Error suspending user: ' + error.message); return; }
+  // Also unassign their number immediately when admin manually suspends
+  await sb.from('assigned_numbers')
+    .update({ user_id: null, assigned_at: null, unassigned_at: new Date().toISOString() })
+    .eq('user_id', suspendingUserId);
+  // Zero credits
+  await sb.from('user_credits')
+    .update({ credits_remaining: 0, updated_at: new Date().toISOString() })
+    .eq('user_id', suspendingUserId);
   closeModal();
   await loadUsers();
+  toast('Client suspended and number returned to pool');
 }
 
-// ── Numbers Management ──
+// ── Unsuspend ──
+async function unsuspendUser(userId, name) {
+  if(!confirm(`Unsuspend ${name}? This will restore their access and reassign a number.`)) return;
+
+  // Reactivate profile
+  const { error } = await sb.from('profiles').update({
+    suspended:        false,
+    account_status:   'active',
+    suspended_at:     null,
+    payment_failed_at: null
+  }).eq('user_id', userId);
+  if(error) { alert('Error unsuspending: ' + error.message); return; }
+
+  // Re-assign a number if they don't have one
+  const { data: existing } = await sb
+    .from('assigned_numbers')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('active', true)
+    .single();
+
+  if(!existing) {
+    const { data: available } = await sb
+      .from('assigned_numbers')
+      .select('id, display_number, waba_id')
+      .is('user_id', null)
+      .eq('active', true)
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    if(available && available.length > 0) {
+      await sb.from('assigned_numbers').update({
+        user_id:     userId,
+        assigned_at: new Date().toISOString()
+      }).eq('id', available[0].id);
+
+      // Update waba_id on profile
+      await sb.from('profiles').update({
+        waba_id: available[0].waba_id
+      }).eq('user_id', userId);
+
+      toast(`✅ ${name} unsuspended — assigned ${available[0].display_number}`);
+    } else {
+      toast(`⚠️ ${name} unsuspended but no numbers available to assign!`);
+    }
+  } else {
+    toast(`✅ ${name} unsuspended`);
+  }
+
+  await loadUsers();
+}
 let allNumbers = [];
 
 async function loadNumbers() {
