@@ -182,17 +182,43 @@
   </div>
   <div style="margin-bottom:22px;"></div>
 
-  <!-- NUMBERS MANAGEMENT -->
+  <!-- WABA / NUMBERS MANAGEMENT -->
   <div class="card" style="margin-bottom:22px;">
     <div class="card-header">
-      <div class="card-title">📱 WhatsApp numbers</div>
-      <button class="btn-action" style="background:var(--green);color:#050807;border-color:var(--green);font-weight:700;" onclick="openAddNumberModal()">+ Add number</button>
+      <div class="card-title">📱 WABAs & Numbers</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" class="search-input" id="wabaSearch" placeholder="Search WABA ID, number or label…" oninput="filterNumbers(this.value)" style="width:260px;"/>
+        <button class="btn-action" style="background:var(--green);color:#050807;border-color:var(--green);font-weight:700;white-space:nowrap;" onclick="openAddNumberModal()">+ Add WABA</button>
+      </div>
     </div>
+
+    <!-- Pool stats -->
+    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="background:var(--surface2);border-radius:9px;padding:10px 16px;font-size:0.8rem;">
+        <span style="color:var(--muted);">Total WABAs: </span>
+        <strong id="statTotal" style="color:var(--white);">—</strong>
+      </div>
+      <div style="background:var(--surface2);border-radius:9px;padding:10px 16px;font-size:0.8rem;">
+        <span style="color:var(--muted);">Available: </span>
+        <strong id="statAvailable" style="color:var(--green);">—</strong>
+      </div>
+      <div style="background:var(--surface2);border-radius:9px;padding:10px 16px;font-size:0.8rem;">
+        <span style="color:var(--muted);">Assigned: </span>
+        <strong id="statAssigned" style="color:var(--accent);">—</strong>
+      </div>
+      <div style="background:var(--surface2);border-radius:9px;padding:10px 16px;font-size:0.8rem;">
+        <span style="color:var(--muted);">Suspended: </span>
+        <strong id="statSuspended" style="color:var(--danger);">—</strong>
+      </div>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
+            <th>Label</th>
             <th>Number</th>
+            <th>WABA ID</th>
             <th>Phone Number ID</th>
             <th>Assigned to</th>
             <th>Status</th>
@@ -200,7 +226,7 @@
           </tr>
         </thead>
         <tbody id="numbersTable">
-          <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">Loading numbers…</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">Loading WABAs…</td></tr>
         </tbody>
       </table>
     </div>
@@ -269,31 +295,73 @@
   </div>
 </div>
 
-<!-- ADD NUMBER MODAL -->
+<!-- ADD WABA MODAL -->
 <div class="modal-overlay" id="addNumberModal">
-  <div class="modal">
-    <h3>Add WhatsApp number</h3>
-    <p>Add a new WABlast number. Get the Phone Number ID and WABA ID from Meta Developers → Your App → WhatsApp → API Setup.</p>
-    <div class="modal-field">
-      <label>Display number</label>
-      <input type="text" id="newNumberDisplay" placeholder="+27 82 123 4567"/>
+  <div class="modal" style="max-width:500px;">
+
+    <!-- STEP 1: Enter details -->
+    <div id="wabaStep1">
+      <h3>Add WABA & Register Number</h3>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Create the WABA in Meta Business Manager first (Settings → WhatsApp accounts → + Add), then enter the details below. WABlast will register the number and generate an internal identifier.
+      </p>
+      <div class="modal-field">
+        <label>WABA ID (from Meta Business Manager)</label>
+        <input type="text" id="newNumberWabaId" placeholder="e.g. 2116529398888604"/>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Found in Meta Business Manager → WhatsApp accounts → click WABA → Summary tab</div>
+      </div>
+      <div class="modal-field">
+        <label>Phone number to register</label>
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;">
+          <input type="text" id="newNumberCC" placeholder="27" value="27"/>
+          <input type="text" id="newNumberPhone" placeholder="821234567 (no leading 0)"/>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Country code + number without leading zero. Must be able to receive SMS or voice call.</div>
+      </div>
+      <div class="modal-field">
+        <label>Verification method</label>
+        <select id="newNumberMethod">
+          <option value="SMS">SMS</option>
+          <option value="VOICE">Voice call</option>
+        </select>
+      </div>
+      <div id="wabaStep1Error" style="display:none;color:var(--danger);font-size:0.82rem;margin-bottom:10px;padding:8px;background:rgba(255,107,107,0.08);border-radius:7px;"></div>
+      <div class="modal-actions">
+        <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-modal confirm" id="wabaStep1Btn" onclick="wabaStep1Submit()">Request OTP →</button>
+      </div>
     </div>
-    <div class="modal-field">
-      <label>Phone Number ID (from Meta)</label>
-      <input type="text" id="newNumberPhoneId" placeholder="e.g. 1008323572370879"/>
+
+    <!-- STEP 2: Enter OTP -->
+    <div id="wabaStep2" style="display:none;">
+      <h3>Enter verification code</h3>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        A verification code has been sent to <strong id="otpSentTo" style="color:var(--white);"></strong>. Enter it below to complete registration.
+      </p>
+      <div class="modal-field">
+        <label>6-digit verification code</label>
+        <input type="text" id="newNumberOtp" placeholder="123456" maxlength="6" style="font-size:1.2rem;letter-spacing:0.2em;text-align:center;font-family:'DM Mono',monospace;"/>
+      </div>
+      <div id="wabaStep2Error" style="display:none;color:var(--danger);font-size:0.82rem;margin-bottom:10px;padding:8px;background:rgba(255,107,107,0.08);border-radius:7px;"></div>
+      <div class="modal-actions">
+        <button class="btn-modal cancel" onclick="wabaBackToStep1()">← Back</button>
+        <button class="btn-modal confirm" id="wabaStep2Btn" onclick="wabaStep2Submit()">Verify & Register →</button>
+      </div>
     </div>
-    <div class="modal-field">
-      <label>WhatsApp Business Account ID / WABA ID (from Meta)</label>
-      <input type="text" id="newNumberWabaId" placeholder="e.g. 2116529398888604"/>
+
+    <!-- STEP 3: Success -->
+    <div id="wabaStep3" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+      <h3 style="margin-bottom:8px;">Number registered!</h3>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:6px;">
+        <strong id="wabaSuccessNumber" style="color:var(--white);"></strong> is now in your WABA pool.
+      </p>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:20px;">
+        Internal label: <strong id="wabaSuccessLabel" style="color:var(--green);font-family:'DM Mono',monospace;"></strong>
+      </p>
+      <button class="btn-modal confirm" onclick="closeModal();loadNumbers();">Done</button>
     </div>
-    <div class="modal-field">
-      <label>Label (optional)</label>
-      <input type="text" id="newNumberLabel" placeholder="e.g. WABlast Number 3"/>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-modal cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-modal confirm" onclick="confirmAddNumber()">Add number</button>
-    </div>
+
   </div>
 </div>
 
@@ -599,43 +667,85 @@ async function unsuspendUser(userId, name) {
   await loadUsers();
 }
 let allNumbers = [];
+let filteredNumbers = [];
 
 async function loadNumbers() {
-  const { data: numbers, error } = await sb
+  const { data: numbers } = await sb
     .from('assigned_numbers')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('label', { ascending: true });
 
   allNumbers = numbers || [];
-  renderNumbers();
+  filteredNumbers = [...allNumbers];
+  renderNumbers(filteredNumbers);
+  renderPoolStats();
 }
 
-function renderNumbers() {
+function renderPoolStats() {
+  const total     = allNumbers.length;
+  const available = allNumbers.filter(n => !n.user_id && n.active).length;
+  const assigned  = allNumbers.filter(n => n.user_id && n.active).length;
+  const suspended = allNumbers.filter(n => !n.active).length;
+  document.getElementById('statTotal').textContent     = total;
+  document.getElementById('statAvailable').textContent = available;
+  document.getElementById('statAssigned').textContent  = assigned;
+  document.getElementById('statSuspended').textContent = suspended;
+}
+
+function filterNumbers(q) {
+  const s = q.toLowerCase().trim();
+  filteredNumbers = !s ? [...allNumbers] : allNumbers.filter(n =>
+    (n.waba_id || '').includes(s) ||
+    (n.display_number || '').toLowerCase().includes(s) ||
+    (n.label || '').toLowerCase().includes(s) ||
+    (n.phone_number_id || '').includes(s) ||
+    (allUsers.find(u => u.id === n.user_id)?.email || '').toLowerCase().includes(s)
+  );
+  renderNumbers(filteredNumbers);
+}
+
+function renderNumbers(list) {
   const tbody = document.getElementById('numbersTable');
-  if(!allNumbers.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No numbers added yet</td></tr>';
+  if(!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No WABAs found</td></tr>';
     return;
   }
-  tbody.innerHTML = allNumbers.map(n => {
-    const assignedUser = allNumbers && n.user_id
-      ? (allUsers.find(u => u.id === n.user_id)?.email || n.user_id.substring(0,8)+'...')
-      : '—';
+  tbody.innerHTML = list.map(n => {
+    const client      = n.user_id ? allUsers.find(u => u.id === n.user_id) : null;
+    const clientEmail = client?.email || '—';
+    const clientPlan  = client?.user_metadata?.plan || '';
     const statusColor = !n.active ? 'var(--danger)' : n.user_id ? 'var(--green)' : 'var(--warn)';
     const statusText  = !n.active ? 'Suspended' : n.user_id ? 'Assigned' : 'Available';
     return `
       <tr>
         <td>
-          <div style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--white);">${n.display_number}</div>
-          <div style="font-size:0.72rem;color:var(--muted);">${n.label||''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--green);font-weight:700;">${n.label || '—'}</div>
         </td>
-        <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">${n.phone_number_id}</td>
-        <td style="font-size:0.82rem;color:var(--muted);">${assignedUser}</td>
+        <td>
+          <div style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--white);">${n.display_number || '—'}</div>
+        </td>
+        <td>
+          <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);cursor:pointer;" onclick="copyToClipboard('${n.waba_id}')" title="Click to copy">
+            ${n.waba_id || '—'} 📋
+          </div>
+        </td>
+        <td>
+          <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">${n.phone_number_id || '—'}</div>
+        </td>
+        <td>
+          ${n.user_id ? `
+            <div style="font-size:0.82rem;color:var(--white);">${clientEmail}</div>
+            ${clientPlan ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">${clientPlan}</div>` : ''}
+          ` : '<span style="color:var(--muted);font-size:0.82rem;">—</span>'}
+        </td>
         <td>
           <span style="color:${statusColor};font-size:0.78rem;font-weight:700;">● ${statusText}</span>
         </td>
         <td>
           <div class="actions-cell">
-            ${n.user_id ? `<button class="btn-action" onclick="unassignNumber('${n.id}','${n.display_number}')">Unassign</button>` : `<button class="btn-action" onclick="openAssignModal(null,null,'${n.id}')">Assign</button>`}
+            ${n.user_id
+              ? `<button class="btn-action" onclick="unassignNumber('${n.id}','${n.display_number}')">Unassign</button>`
+              : `<button class="btn-action" onclick="openAssignModal(null,null,'${n.id}')">Assign</button>`}
             ${n.active
               ? `<button class="btn-action danger" onclick="suspendNumber('${n.id}','${n.display_number}')">Suspend</button>`
               : `<button class="btn-action" onclick="reactivateNumber('${n.id}','${n.display_number}')">Reactivate</button>`}
@@ -645,33 +755,137 @@ function renderNumbers() {
   }).join('');
 }
 
-// ── Add Number ──
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => toast(`Copied: ${text}`));
+}
+
+// ── WABA Registration Flow ──
+let pendingPhoneNumberId = null;
+
 function openAddNumberModal() {
-  document.getElementById('newNumberDisplay').value  = '';
-  document.getElementById('newNumberPhoneId').value  = '';
-  document.getElementById('newNumberWabaId').value   = '';
-  document.getElementById('newNumberLabel').value    = '';
+  // Reset all steps
+  document.getElementById('wabaStep1').style.display = 'block';
+  document.getElementById('wabaStep2').style.display = 'none';
+  document.getElementById('wabaStep3').style.display = 'none';
+  document.getElementById('newNumberWabaId').value = '';
+  document.getElementById('newNumberCC').value = '27';
+  document.getElementById('newNumberPhone').value = '';
+  document.getElementById('newNumberOtp').value = '';
+  document.getElementById('wabaStep1Error').style.display = 'none';
+  document.getElementById('wabaStep2Error').style.display = 'none';
+  pendingPhoneNumberId = null;
   document.getElementById('addNumberModal').classList.add('open');
 }
 
-async function confirmAddNumber() {
-  const display  = document.getElementById('newNumberDisplay').value.trim();
-  const phoneId  = document.getElementById('newNumberPhoneId').value.trim();
-  const wabaId   = document.getElementById('newNumberWabaId').value.trim();
-  const label    = document.getElementById('newNumberLabel').value.trim();
-  if(!display || !phoneId || !wabaId) { alert('Please fill in the number, Phone Number ID and WABA ID.'); return; }
-  const { error } = await sb.from('assigned_numbers').insert({
-    display_number:  display,
-    phone_number_id: phoneId,
-    waba_id:         wabaId,
-    label:           label || 'WABlast Number',
-    active:          true
-  });
-  if(error) { alert('Error adding number: ' + error.message); return; }
-  closeModal();
-  await loadNumbers();
-  toast(`✅ ${display} added successfully!`);
+async function wabaStep1Submit() {
+  const wabaId = document.getElementById('newNumberWabaId').value.trim();
+  const cc     = document.getElementById('newNumberCC').value.trim();
+  const phone  = document.getElementById('newNumberPhone').value.trim();
+  const method = document.getElementById('newNumberMethod').value;
+
+  if(!wabaId || !cc || !phone) {
+    showWabaError(1, 'Please fill in all fields.');
+    return;
+  }
+
+  const btn = document.getElementById('wabaStep1Btn');
+  btn.disabled = true;
+  btn.textContent = 'Requesting OTP…';
+  document.getElementById('wabaStep1Error').style.display = 'none';
+
+  try {
+    // Step 1: Add phone number to WABA
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(`https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1/register-waba-number`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action: 'add_number', waba_id: wabaId, cc, phone_number: phone, method })
+    });
+
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Failed to add number');
+
+    pendingPhoneNumberId = data.phone_number_id;
+
+    // Show step 2
+    document.getElementById('otpSentTo').textContent = `+${cc}${phone} via ${method}`;
+    document.getElementById('wabaStep1').style.display = 'none';
+    document.getElementById('wabaStep2').style.display = 'block';
+
+  } catch(e) {
+    showWabaError(1, e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Request OTP →';
 }
+
+function wabaBackToStep1() {
+  document.getElementById('wabaStep1').style.display = 'block';
+  document.getElementById('wabaStep2').style.display = 'none';
+}
+
+async function wabaStep2Submit() {
+  const otp    = document.getElementById('newNumberOtp').value.trim();
+  const wabaId = document.getElementById('newNumberWabaId').value.trim();
+  const cc     = document.getElementById('newNumberCC').value.trim();
+  const phone  = document.getElementById('newNumberPhone').value.trim();
+
+  if(!otp || otp.length < 6) {
+    showWabaError(2, 'Please enter the 6-digit code.');
+    return;
+  }
+
+  const btn = document.getElementById('wabaStep2Btn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  document.getElementById('wabaStep2Error').style.display = 'none';
+
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(`https://bddfjeifykuhzidwzbbg.supabase.co/functions/v1/register-waba-number`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: 'verify_and_register',
+        waba_id: wabaId,
+        phone_number_id: pendingPhoneNumberId,
+        code: otp,
+        cc,
+        phone_number: phone
+      })
+    });
+
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Verification failed');
+
+    // Show success
+    document.getElementById('wabaStep2').style.display = 'none';
+    document.getElementById('wabaStep3').style.display = 'block';
+    document.getElementById('wabaSuccessNumber').textContent = `+${cc}${phone}`;
+    document.getElementById('wabaSuccessLabel').textContent  = data.label;
+
+  } catch(e) {
+    showWabaError(2, e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Verify & Register →';
+}
+
+function showWabaError(step, msg) {
+  const el = document.getElementById(`wabaStep${step}Error`);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function confirmAddNumber() {} // replaced by wabaStep flow above
 
 // ── Unassign Number ──
 async function unassignNumber(numberId, displayNumber) {
